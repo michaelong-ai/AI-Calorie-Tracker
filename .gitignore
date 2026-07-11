@@ -1,0 +1,36 @@
+# Files that should never be committed to version control.
+#
+# GOTCHA (learned the hard way): .gitignore does NOT support comments on the
+# same line as a pattern — the comment text becomes part of the pattern and
+# silently breaks it. Comments live on their own lines, like this file does.
+
+# --- Python (backend) ---
+# The virtual environment — recreated from requirements.txt
+backend/.venv/
+# Compiled Python bytecode caches
+__pycache__/
+*.pyc
+
+# --- Node (frontend) ---
+# Installed packages — recreated from package.json
+frontend/node_modules/
+# Production build output — generated, never hand-edited
+frontend/dist/
+
+# --- Logs ---
+# Rotating app log files — runtime output, not code
+backend/logs/
+
+# --- Databases & secrets ---
+# Local database files (personal meal/weight data, not code)
+*.sqlite3
+*.db
+# Environment variables incl. the ANTHROPIC API KEY — never commit
+.env
+
+# --- Editor/OS noise ---
+.vscode/
+Thumbs.db
+
+# --- AI assistant local config (machine-specific paths, session permissions) ---
+.claude/

@@ -1,0 +1,12 @@
+# Development-only dependencies — things needed to work ON the app (testing),
+# not to RUN the app. Kept separate from requirements.txt so a production
+# deploy doesn't install test tooling it will never use.
+# Install with:  pip install -r requirements-dev.txt
+
+# pytest: the test runner. Finds files named test_*.py, runs every function
+# named test_*, and reports which passed/failed.
+pytest>=8.0
+
+# httpx: HTTP client library that FastAPI's TestClient uses under the hood
+# to call the app in-process (no real network, no running server needed).
+httpx>=0.27

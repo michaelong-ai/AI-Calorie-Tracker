@@ -1,0 +1,394 @@
+/* index.css — the app's global stylesheet.
+ *
+ * MOBILE-FIRST approach: every rule below is written for a phone screen
+ * first; the single @media block at the bottom adds adjustments for larger
+ * screens. This matches the product decision that the primary device is a
+ * phone at a meal (see REQUIREMENTS.md).
+ *
+ * Colors are defined once as CSS variables on :root so every component
+ * uses the same palette, and dark mode is one media query, not a rewrite.
+ */
+
+:root {
+  --bg: #f6f7f9;          /* page background */
+  --surface: #ffffff;     /* cards, header, tab bar */
+  --text: #1c1f26;
+  --muted: #6b7280;       /* secondary text */
+  --border: #e3e6ea;
+  --accent: #16a34a;      /* green — actions, active tab */
+  --danger: #dc2626;      /* delete buttons, errors */
+
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  color-scheme: light dark;
+}
+
+/* Dark mode: the browser reports the user's OS preference; we only need to
+ * swap the palette variables — every rule below picks the change up free. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111318;
+    --surface: #1b1e25;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #2a2e37;
+  }
+}
+
+/* border-box: declared widths include padding+border (sane math). */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+/* --- Shell layout ----------------------------------------------------------
+ * The shell is a full-height 3-row grid: header / content / tab bar.
+ * 100dvh = "dynamic viewport height", which correctly accounts for mobile
+ * browser bars that show/hide while scrolling (100vh gets this wrong).
+ */
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr auto; /* header | flexible middle | tab bar */
+  height: 100dvh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Backend status dot in the header. */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;       /* circle */
+  background: var(--muted); /* grey while "checking" */
+}
+.status-dot.ok {
+  background: var(--accent);
+}
+.status-dot.down {
+  background: var(--danger);
+}
+
+/* The middle row scrolls; header and tab bar stay fixed in place. */
+.app-content {
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* --- Bottom tab bar -------------------------------------------------------- */
+.tab-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr; /* three equal touch targets */
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  /* Respect the iPhone home-indicator area so buttons aren't underneath it. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab-bar button {
+  padding: 0.75rem 0;
+  font-size: 0.95rem;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* The active tab (App.tsx sets aria-current on it). */
+.tab-bar button[aria-current="true"] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* --- Generic pieces used by screens ----------------------------------------- */
+.screen h2 {
+  margin-top: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.error {
+  color: var(--danger);
+}
+
+/* --- Today screen ------------------------------------------------------------ */
+
+/* Date navigation: ‹ [Today] › */
+.day-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.day-nav h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+.day-nav button {
+  font-size: 1.5rem;
+  line-height: 1;
+  padding: 0.25rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Totals bar: big kcal number left, macro summary right. */
+.totals {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.totals strong {
+  font-size: 1.5rem;
+}
+
+/* One entry row: text grows, action buttons stay right. */
+.entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.entry-main {
+  flex: 1; /* take all space not used by the buttons */
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.entry-actions button {
+  border: none;
+  background: none;
+  font-size: 1.1rem;
+  padding: 0.35rem;
+  cursor: pointer;
+}
+
+/* Add/edit form: label above input, comfortably tappable. */
+.form label {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.form input {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.6rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+.form-actions button,
+.add-button {
+  padding: 0.6rem 1.1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* The main action on screen — filled green so it stands out. */
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.add-button {
+  width: 100%;
+}
+button.danger {
+  color: var(--danger);
+}
+
+/* Dropdowns share the input look (Goals screen selects). */
+.form select {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.6rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* --- History screen ------------------------------------------------------------ */
+
+/* Weight input + Log button side by side. */
+.weight-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.weight-row input {
+  flex: 1;
+  padding: 0.6rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.weight-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.3rem 0;
+}
+.weight-item button {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* One past-day row: date+macros left, kcal-vs-target right. */
+.day-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.day-kcal {
+  white-space: nowrap; /* keep "1830 / 2200 kcal" on one line */
+  font-weight: 600;
+}
+/* Adherence coloring: green = within target (up to 5% over is still "a
+ * normal day"), red = clearly over. Days with no target stay neutral. */
+.day-kcal.within {
+  color: var(--accent);
+}
+.day-kcal.over {
+  color: var(--danger);
+}
+
+/* The report download link — styled like a button, but it's an <a> so the
+ * browser's native download behavior does the work. */
+.report-link {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  margin-bottom: 1rem;
+}
+
+/* --- Charts (T4.3) -------------------------------------------------------------
+ * Colors come from the validated dataviz palette (see the dataviz skill).
+ * Defined as variables so light/dark swap in one place and the same SVG
+ * markup renders correctly in the offline HTML report (T5.1).
+ */
+:root {
+  --chart-series-1: #2a78d6;   /* blue — weight line & intake bars (light) */
+  --chart-grid: #e1e0d9;       /* hairline gridlines */
+  --chart-axis: #898781;       /* muted axis labels */
+  --chart-target: #d03b3b;     /* status:critical — the goal reference line */
+  --chart-bar-muted: #e1e0d9;  /* empty-week placeholder */
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --chart-series-1: #3987e5; /* blue stepped for the dark surface */
+    --chart-grid: #2c2c2a;
+    --chart-axis: #898781;
+    --chart-target: #d03b3b;
+    --chart-bar-muted: #2c2c2a;
+  }
+}
+
+.chart {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.25rem 0 0.5rem;
+}
+.chart-title {
+  font-size: 0.85rem;
+  margin: 0.75rem 0 0;
+}
+.chart-legend {
+  font-size: 0.8rem;
+  margin: 0 0 0.5rem;
+}
+/* Recessive chrome: thin gridlines, small muted labels. */
+.chart-grid { stroke: var(--chart-grid); stroke-width: 1; }
+.chart-axis-label { fill: var(--chart-axis); font-size: 8px; }
+/* Data marks: 2px line, filled dots, rounded bars. */
+.chart-line { stroke: var(--chart-series-1); stroke-width: 2; stroke-linejoin: round; }
+.chart-dot { fill: var(--chart-series-1); }
+.chart-bar { fill: var(--chart-series-1); }
+.chart-bar-muted { fill: var(--chart-bar-muted); }
+/* The value/target callouts wear ink tokens, never the series color. */
+.chart-value { fill: var(--text); font-size: 9px; font-weight: 600; }
+.chart-target { stroke: var(--chart-target); stroke-width: 1.5; stroke-dasharray: 4 3; }
+
+/* --- AI wizard (Sprint 3) ------------------------------------------------------ */
+
+/* Scan + manual buttons side by side. */
+.add-row {
+  display: flex;
+  gap: 0.5rem;
+}
+.add-row .add-button {
+  flex: 1;
+}
+
+/* The AI's assumptions list on the estimate card — indented, compact. */
+.assumptions {
+  margin: 0.25rem 0 0.75rem;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+/* File input: match the other inputs' spacing. */
+.form input[type="file"] {
+  padding: 0.4rem;
+}
+
+/* --- Larger screens ----------------------------------------------------------
+ * On a desktop we keep the phone-like column centered rather than stretching
+ * lists across a 27" monitor — content stays readable, and what you test on
+ * desktop matches what the phone shows.
+ */
+@media (min-width: 640px) {
+  .app {
+    max-width: 480px;
+    margin: 0 auto;             /* center the column */
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+}

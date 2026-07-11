@@ -1,0 +1,34 @@
+# Python dependencies for the backend.
+# Install with:  pip install -r requirements.txt
+#
+# Versions are pinned with ">=" lower bounds so `pip install` grabs a recent,
+# compatible release. If the app ever breaks after a dependency update, we can
+# pin exact versions here (e.g. fastapi==0.111.0) to freeze what works.
+
+# FastAPI: the web framework. It turns Python functions into HTTP endpoints
+# and auto-generates interactive API docs at /docs.
+fastapi>=0.111
+
+# Uvicorn: the ASGI server that actually listens on a port and passes HTTP
+# requests to FastAPI. "[standard]" adds useful extras like auto-reload
+# support (watchfiles) so the server restarts when we edit code.
+uvicorn[standard]>=0.30
+
+# Anthropic: the official SDK for calling Claude (the vision model that
+# estimates meals / reads nutrition labels in feature F1).
+anthropic>=0.92
+
+# python-dotenv: loads variables from backend/.env into the environment at
+# startup — that's where the ANTHROPIC_API_KEY lives (NEVER in code/git).
+python-dotenv>=1.0
+
+# python-multipart: FastAPI needs this to parse file uploads (the meal
+# photo arrives as a multipart/form-data request, not JSON).
+python-multipart>=0.0.9
+
+# truststore: makes Python verify HTTPS against the WINDOWS certificate
+# store instead of its own bundled CA list. Needed on this machine because
+# antivirus/proxy software intercepts HTTPS with its own certificate —
+# Windows trusts it, Python's bundle doesn't (same root cause as the pip
+# trusted-host workaround; see README troubleshooting).
+truststore>=0.9
