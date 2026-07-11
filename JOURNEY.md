@@ -111,6 +111,12 @@ decision had a written home.
 - **Re-scope (2026-07-09)** — Deploy (E4/AWS) deferred to Sprint 7 per PO:
   local-first. Telegram (E3) pulled forward and re-designed from webhooks to
   long polling so it needs no public URL. Sprint 6 = macro rings + Telegram.
+- **Published (2026-07-11)** — Portfolio-grade README rebuilt (live captured
+  API examples, mermaid architecture, condensed lessons) and the repo pushed
+  to GitHub (michaelong-ai/AI-Calorie-Tracker). The pre-push security sweep
+  caught a broken .gitignore about to stage the API key — see Lessons #8.
+  Hosting analysis done (Lambda vs EC2 vs Lightsail/App Runner) ahead of
+  Sprint 7.
 
 ---
 
@@ -149,7 +155,16 @@ decision had a written home.
    guarantee parseable JSON; the tracker is unwritable without user
    confirmation. Trust in the AI feature comes from these constraints, not
    from the model being right.
-8. **Background dev servers die with the assistant's session.** Repeatedly
+8. **`.gitignore` comments must live on their own lines.** The first
+   staging attempt for GitHub included `backend/.env` (the real API key!)
+   because inline comments (`backend/.venv/  # recreated from...`) are
+   *part of the pattern* in gitignore syntax — every rule was silently
+   broken. Caught by a pre-commit security check (`git check-ignore` on a
+   list of known-sensitive files) before anything was committed. → Never
+   trust ignore rules by reading them; verify with `git check-ignore` and
+   a staged-files sweep before the first commit. The educational-comments
+   habit is for *code*; config formats each have their own comment rules.
+9. **Background dev servers die with the assistant's session.** Repeatedly
    confusing until diagnosed. → Own your servers: run `dev-backend.ps1` /
    `dev-frontend.ps1` in your own terminals; let the assistant verify via
    tests and HTTP calls.
