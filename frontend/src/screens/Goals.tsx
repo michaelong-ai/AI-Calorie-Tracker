@@ -12,6 +12,7 @@ import {
   calculateTargets,
   fetchActiveGoal,
   fetchGoalHistory,
+  formatDate,
   saveGoal,
   toLocalDate,
 } from "../api";
@@ -261,7 +262,7 @@ function Goals() {
           <h3>Goal history</h3>
           {history.map((g) => (
             <p key={g.id} className="muted">
-              From {g.effective_from}: {Math.round(g.calories_target)} kcal · P{" "}
+              From {formatDate(g.effective_from)}: {Math.round(g.calories_target)} kcal · P{" "}
               {Math.round(g.protein_g_target)} · C {Math.round(g.carbs_g_target)} · F{" "}
               {Math.round(g.fat_g_target)}
             </p>

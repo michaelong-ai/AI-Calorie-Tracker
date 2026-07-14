@@ -174,6 +174,25 @@ function Wizard({ date, onSaved, onClose }: WizardProps) {
             <p className="muted">
               {estimate?.description} · confidence: {estimate?.confidence}
             </p>
+            {/* The calorie breakdown (D4): one line per component so an
+                inflated total is auditable — spot the line you disagree
+                with, then edit the totals below. */}
+            {estimate && estimate.items.length > 0 && (
+              <table className="breakdown">
+                <tbody>
+                  {estimate.items.map((it) => (
+                    <tr key={it.name}>
+                      <td>{it.name}</td>
+                      <td className="num">{Math.round(it.calories)} kcal</td>
+                    </tr>
+                  ))}
+                  <tr className="breakdown-total">
+                    <td>total</td>
+                    <td className="num">{Math.round(estimate.calories)} kcal</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
             {estimate && estimate.assumptions.length > 0 && (
               <ul className="assumptions">
                 {estimate.assumptions.map((a) => (

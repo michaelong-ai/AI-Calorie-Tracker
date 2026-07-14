@@ -374,6 +374,30 @@ button.danger {
   font-size: 0.9rem;
 }
 
+/* Per-ingredient calorie breakdown on the estimate card (D4). */
+.breakdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+}
+.breakdown td {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+}
+.breakdown .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums; /* digits align vertically */
+  white-space: nowrap;
+}
+/* The total row stands out — it's the number being justified. */
+.breakdown-total td {
+  color: var(--text);
+  font-weight: 600;
+  border-bottom: none;
+}
+
 /* File input: match the other inputs' spacing. */
 .form input[type="file"] {
   padding: 0.4rem;

@@ -54,6 +54,17 @@ class LabelBasis(BaseModel):
     serving_size_g: Optional[float] = None  # grams per serving, if printed
 
 
+class Ingredient(BaseModel):
+    """One component of the meal with its share of the calories (D4).
+
+    Exists so the total is AUDITABLE: the user can see '350g seasoned rice
+    → 520 kcal' and challenge the one line that looks inflated, instead of
+    arguing with a single opaque number (PO feedback: totals felt high)."""
+
+    name: str  # e.g. "seasoned rice (~350g)"
+    calories: float
+
+
 class Estimate(BaseModel):
     """The structured estimate as the frontend receives it."""
 
@@ -62,6 +73,9 @@ class Estimate(BaseModel):
     # The model's visible working — portion size, preparation, brand —
     # shown on the estimate card so the user knows what to correct.
     assumptions: list[str]
+    # Per-component calorie breakdown (D4). Empty for label scans (the
+    # printed total needs no justification) and for kind=unknown.
+    items: list[Ingredient]
     calories: float = Field(ge=0)
     protein_g: float = Field(ge=0)
     carbs_g: float = Field(ge=0)
@@ -94,6 +108,25 @@ ESTIMATE_SCHEMA = {
             "description": "Assumptions made: portion size, cooking method, "
             "brand. Empty for exact label transcriptions.",
         },
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The component with its estimated "
+                        "portion, e.g. 'seasoned rice (~350g)'",
+                    },
+                    "calories": {"type": "number"},
+                },
+                "required": ["name", "calories"],
+                "additionalProperties": False,
+            },
+            "description": "Per-component calorie breakdown for kind="
+            "estimate. The components' calories MUST sum to the total "
+            "calories. Empty array for label/unknown.",
+        },
         "calories": {"type": "number"},
         "protein_g": {"type": "number"},
         "carbs_g": {"type": "number"},
@@ -116,7 +149,7 @@ ESTIMATE_SCHEMA = {
         "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
     },
     "required": [
-        "kind", "description", "assumptions", "calories",
+        "kind", "description", "assumptions", "items", "calories",
         "protein_g", "carbs_g", "fat_g", "label_basis", "confidence",
     ],
     "additionalProperties": False,
@@ -133,14 +166,22 @@ Decide which case applies:
    as stated for the basis printed on the label (per 100g, per serving, or
    per package) and report that basis in label_basis. Do not scale them.
 2. Prepared/plated food (or a text description of a meal) -> kind="estimate".
-   Estimate total calories, protein, carbs and fat for the WHOLE portion
-   visible/described. List every assumption you make (portion weight,
-   cooking oil, hidden ingredients) in assumptions.
-3. Neither food nor a label is identifiable -> kind="unknown" and zeros.
+   Work BOTTOM-UP: break the meal into its visible components, estimate each
+   component's portion and calories separately in items (name the portion in
+   the item, e.g. "seasoned rice (~350g)"), and make the total calories
+   equal the SUM of the items — never a round number picked first and
+   justified later. Estimate protein/carbs/fat for the whole portion. List
+   every assumption you make (portion weight, cooking oil, hidden
+   ingredients) in assumptions.
+3. Neither food nor a label is identifiable -> kind="unknown", zeros, empty items.
 
-Be realistic rather than optimistic: restaurant and hawker portions are
-usually larger and oilier than home cooking. If the user's text contradicts
-the photo, trust the text (they know what they ate)."""
+Be realistic, not padded: restaurant and hawker food is often oilier than
+home cooking, but do NOT add safety margin on top of each component — the
+per-component estimates should each be your honest middle guess, so the sum
+is realistic rather than worst-case. When torn between two portion sizes,
+pick the one the photo actually supports and state it as an assumption. If
+the user's text contradicts the photo, trust the text (they know what they
+ate)."""
 
 
 def estimate_nutrition(

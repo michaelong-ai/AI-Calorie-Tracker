@@ -200,3 +200,18 @@ export function toLocalDate(date: Date): string {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+// Month names for display formatting (D5) — index matches getMonth().
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+
+/**
+ * Format an ISO date for DISPLAY as DD-MMM-YYYY, e.g. "12-Jul-2026"
+ * (PO readability request, D5). The ISO form stays the STORAGE format —
+ * it sorts correctly and the API only ever speaks ISO; this converts at
+ * the last moment, purely for human eyes.
+ */
+export function formatDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}-${MONTHS[Number(m) - 1]}-${y}`;
+}

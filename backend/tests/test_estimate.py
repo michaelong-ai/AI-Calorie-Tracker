@@ -13,11 +13,17 @@ import app.routers.estimate as estimate_router
 from app.services.estimation import Estimate, EstimationError
 from tests.conftest import VALID_ENTRY
 
-# A canned successful estimate the fake model returns.
+# A canned successful estimate the fake model returns. The items sum to the
+# total — the invariant the prompt demands of the real model (D4).
 FAKE_ESTIMATE = Estimate(
     kind="estimate",
     description="chicken rice, large plate",
     assumptions=["~450g portion", "cooked with rendered chicken fat"],
+    items=[
+        {"name": "seasoned rice (~300g)", "calories": 420},
+        {"name": "roasted chicken (~150g)", "calories": 240},
+        {"name": "chili + soy sauce", "calories": 42},
+    ],
     calories=702,
     protein_g=33,
     carbs_g=80,
@@ -88,6 +94,10 @@ def test_text_only_estimate(client, fake_model):
     assert body["kind"] == "estimate"
     assert body["calories"] == 702
     assert body["assumptions"]  # the model's working is exposed to the UI
+    # D4: the per-ingredient breakdown reaches the UI, and it adds up —
+    # the audit trail for "why is this 702 kcal?"
+    assert len(body["items"]) == 3
+    assert sum(i["calories"] for i in body["items"]) == body["calories"]
 
     # The service received the text and no image.
     assert fake_model["received"]["text"] == "chicken rice, large"
@@ -110,6 +120,7 @@ def test_label_scan_shape_passes_through(client, fake_model):
         kind="label",
         description="Oat drink, 1L carton",
         assumptions=[],
+        items=[],  # label transcriptions carry no breakdown — the printed total IS the truth
         calories=46,
         protein_g=1.0,
         carbs_g=6.6,
@@ -127,7 +138,7 @@ def test_unknown_kind_passes_through(client, fake_model):
     fall back to manual entry (spec F1 acceptance criterion)."""
     fake_model["result"] = Estimate(
         kind="unknown", description="No food identified", assumptions=[],
-        calories=0, protein_g=0, carbs_g=0, fat_g=0,
+        items=[], calories=0, protein_g=0, carbs_g=0, fat_g=0,
         label_basis=None, confidence="low",
     )
     body = client.post("/estimate", data={"text": "asdfghjkl"}).json()

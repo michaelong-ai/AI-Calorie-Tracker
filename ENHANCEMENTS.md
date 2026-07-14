@@ -59,6 +59,26 @@ that picking it up weeks later needs no archaeology.
   customer!), and a deployed backend with a public URL (depends on T0.4).
   Requires webhook reachability — pairs naturally with E4.
 
+- [>] **E6 — Food library: cache frequent foods, skip the LLM** *(PO, 2026-07-11, mid-testing — PROMOTED 2026-07-15 into Sprint 6 as T6.4, as variant (a) derive-from-history: a dropdown of previously scanned foods with AI name + calories on the manual add form)*
+  A growing list of foods the user has eaten before, selectable in one tap —
+  "if I ate it before, I shouldn't need to call the AI again."
+  **Why:** three wins at once — instant logging for repeat meals (no 5–15s
+  AI wait, which is the bigger prize), zero API cost for the foods that make
+  up most real diets, and it works offline/when the AI is down. Notably:
+  "saved/favorite meals" was in the ORIGINAL spec's Out-of-Scope list as a
+  v2 candidate — this is it maturing, now with a cost rationale.
+  **How (sketch):** two candidate designs, decide at promotion time:
+  (a) *zero-effort* — derive "frequents" from existing `entries` history
+  (GROUP BY description, count, recency-weighted) and show a quick-pick row
+  in the add flow; no schema change, but duplicate/near-duplicate
+  descriptions ("chicken rice" vs "chicken rice large") pollute the list;
+  (b) *explicit* — a ⭐ "save as favorite" on any entry/estimate into a new
+  `favorites` table (user_id as always), cleaner names, one more tap of
+  friction. Either way the pick pre-fills the normal entry form (still
+  editable — portion varies day to day) and saves through the single write
+  path with source='manual'. Pairs beautifully with the Telegram bot later:
+  "/again chicken rice" logs without any AI call.
+
 - [ ] **E5 — PWA: installable home-screen app** *(suggested during the
   phone-access discussion, 2026-07-09 — idea only, not scheduled)*
   Beyond plain "Add to Home Screen": a web-app manifest (name, icon, theme

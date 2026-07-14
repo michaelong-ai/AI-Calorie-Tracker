@@ -11,6 +11,7 @@ import {
   fetchActiveGoal,
   fetchDaySummaries,
   fetchTrends,
+  formatDate,
   listWeights,
   logWeight,
   reportUrl,
@@ -74,7 +75,7 @@ function History() {
 
   /** Remove a weight reading, then refresh the trend chart. */
   async function removeWeightAndRefresh(w: WeightEntry) {
-    if (!window.confirm(`Delete weight ${w.weight_kg} kg on ${w.local_date}?`)) return;
+    if (!window.confirm(`Delete weight ${w.weight_kg} kg on ${formatDate(w.local_date)}?`)) return;
     try {
       await deleteWeight(w.id);
       setWeights(weights.filter((x) => x.id !== w.id));
@@ -100,42 +101,29 @@ function History() {
 
       {error && <p className="error">{error}</p>}
 
-      {/* --- Weight log (T4.1) --- */}
-      <div className="card form">
-        <h3>Body weight</h3>
-        <div className="weight-row">
-          <input
-            inputMode="decimal"
-            placeholder="kg today"
-            value={weightInput}
-            onChange={(e) => setWeightInput(e.target.value)}
-          />
-          <button type="button" className="primary" onClick={saveWeight}>
-            Log
-          </button>
-        </div>
-        {weights.length > 0 && (
-          <div className="weight-list">
-            {/* slice(0, 5): only the recent few here; the full trend gets
-                a chart in T4.3. */}
-            {weights.slice(0, 5).map((w) => (
-              <p key={w.id} className="muted weight-item">
-                {w.local_date}: <strong>{w.weight_kg} kg</strong>
-                <button type="button" className="danger" onClick={() => removeWeightAndRefresh(w)}>
-                  ✕
-                </button>
-              </p>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* --- Trends: weight + intake, stacked & time-aligned (T4.3) ---
           Two separate single-axis charts sharing the same week span —
           deliberately NOT one dual-axis plot (a readability trap). */}
       {trends && (trends.weights.length >= 2 || trends.weeks.some((w) => w.days_logged > 0)) && (
         <div className="card">
           <h3>Trends ({TREND_WEEKS} weeks)</h3>
+
+          {/* Calories lead the screen (PO request D6) — the daily decision
+              metric; weight is the slower-moving outcome below it. */}
+          <p className="chart-title muted">Avg daily calories per week</p>
+          <BarChart
+            target={goal?.calories_target ?? null}
+            bars={trends.weeks.map((w) => ({
+              label: shortDate(w.week_start),
+              value: w.avg_calories,
+              muted: w.days_logged === 0,
+            }))}
+          />
+          {goal && (
+            <p className="chart-legend muted">
+              Dashed line = {Math.round(goal.calories_target)} kcal target
+            </p>
+          )}
 
           {/* Weight trend — needs at least two readings to draw a line. */}
           {trends.weights.length >= 2 ? (
@@ -153,23 +141,6 @@ function History() {
             <p className="muted">Log weight on 2+ days to see a trend line.</p>
           )}
 
-          {/* Weekly average intake — bars, with the current goal as a
-              dashed reference line. */}
-          <p className="chart-title muted">Avg daily calories per week</p>
-          <BarChart
-            target={goal?.calories_target ?? null}
-            bars={trends.weeks.map((w) => ({
-              label: shortDate(w.week_start),
-              value: w.avg_calories,
-              muted: w.days_logged === 0,
-            }))}
-          />
-          {goal && (
-            <p className="chart-legend muted">
-              Dashed line = {Math.round(goal.calories_target)} kcal target
-            </p>
-          )}
-
           {/* Latest week's macro averages as a quick stat line. */}
           {(() => {
             const latest = [...trends.weeks].reverse().find((w) => w.days_logged > 0);
@@ -185,14 +156,6 @@ function History() {
         </div>
       )}
 
-      {/* --- Progress report export (T5.1) ---
-          A plain download link: the backend answers with
-          Content-Disposition: attachment, so tapping this saves a
-          self-contained .html file (opens offline, keep as a snapshot). */}
-      <a className="add-button report-link" href={reportUrl(TREND_WEEKS)} download>
-        📄 Download progress report ({TREND_WEEKS} weeks)
-      </a>
-
       {/* --- Past days vs their targets (T4.2) --- */}
       <h3>Last {DAYS_BACK} days</h3>
       {days.length === 0 ? (
@@ -202,7 +165,7 @@ function History() {
           <div className="card day-row" key={day.local_date}>
             <div className="entry-main">
               <span>
-                {day.local_date}
+                {formatDate(day.local_date)}
                 <span className="muted"> · {day.entry_count} entr{day.entry_count === 1 ? "y" : "ies"}</span>
               </span>
               <span className="muted">
@@ -218,6 +181,43 @@ function History() {
           </div>
         ))
       )}
+
+      {/* --- Weight log (T4.1) — below the calorie sections (PO request D6) --- */}
+      <div className="card form">
+        <h3>Body weight</h3>
+        <div className="weight-row">
+          <input
+            inputMode="decimal"
+            placeholder="kg today"
+            value={weightInput}
+            onChange={(e) => setWeightInput(e.target.value)}
+          />
+          <button type="button" className="primary" onClick={saveWeight}>
+            Log
+          </button>
+        </div>
+        {weights.length > 0 && (
+          <div className="weight-list">
+            {/* Only the recent few here; the full trend is the chart above. */}
+            {weights.slice(0, 5).map((w) => (
+              <p key={w.id} className="muted weight-item">
+                {formatDate(w.local_date)}: <strong>{w.weight_kg} kg</strong>
+                <button type="button" className="danger" onClick={() => removeWeightAndRefresh(w)}>
+                  ✕
+                </button>
+              </p>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* --- Progress report export (T5.1) ---
+          A plain download link: the backend answers with
+          Content-Disposition: attachment, so tapping this saves a
+          self-contained .html file (opens offline, keep as a snapshot). */}
+      <a className="add-button report-link" href={reportUrl(TREND_WEEKS)} download>
+        📄 Download progress report ({TREND_WEEKS} weeks)
+      </a>
     </section>
   );
 }

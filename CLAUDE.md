@@ -26,6 +26,11 @@ TDEE-based targets. Functional spec: `REQUIREMENTS.md`. Sprint backlog:
   at the end of every sprint, pivot, or painful debugging session, append
   an Iteration Log entry and any new Lessons Learnt — in the same session,
   while fresh. Its "Going forward" checklist is the end-of-sprint routine.
+- **When asked to "continue" / "what's next"** (any session, any model):
+  don't trust chat memory — reconstruct state from the files above plus
+  git status, reconcile the backlog against reality (uncommitted changes,
+  test suite, stale blockers), then take the highest-priority unblocked
+  task. Full procedure: the `continue-project` skill.
 
 ## Stack (decided 2026-07-05, refinement session)
 

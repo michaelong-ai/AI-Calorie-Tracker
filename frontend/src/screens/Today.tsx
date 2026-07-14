@@ -16,6 +16,7 @@ import {
   createEntry,
   deleteEntry,
   fetchActiveGoal,
+  formatDate,
   listEntries,
   toLocalDate,
   updateEntry,
@@ -176,7 +177,7 @@ function Today() {
         <button type="button" onClick={() => shiftDay(-1)} aria-label="Previous day">
           ‹
         </button>
-        <h2>{isToday ? "Today" : date}</h2>
+        <h2>{isToday ? "Today" : formatDate(date)}</h2>
         {/* Can't navigate into the future — the forward arrow disappears on today. */}
         <button
           type="button"

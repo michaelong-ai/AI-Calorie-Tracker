@@ -32,6 +32,15 @@ GOOD = "#006300"
 CRITICAL = "#d03b3b"
 
 
+def _display_date(iso: str) -> str:
+    """ISO "2026-07-12" -> "12-Jul-2026" (the app-wide display format, D5).
+
+    Mirrors the frontend's formatDate(): ISO stays the storage/API format;
+    conversion happens only at the moment of display.
+    """
+    return datetime.fromisoformat(iso).strftime("%d-%b-%Y")
+
+
 def build_report_html(
     period_label: str,
     weeks: list,        # list[WeekBucket] from the trends service
@@ -44,7 +53,7 @@ def build_report_html(
     Inputs are already-computed data objects (the router fetches them). Returns
     a complete <!doctype html>… string ready to serve as a download.
     """
-    generated = datetime.now().strftime("%d %b %Y, %H:%M")
+    generated = datetime.now().strftime("%d-%b-%Y, %H:%M")
 
     # --- Summary numbers ------------------------------------------------------
     logged = [d for d in days if d.entry_count > 0]
@@ -78,7 +87,7 @@ def build_report_html(
         over = d.target and d.calories > d.target.calories_target * 1.05
         color = f"color:{CRITICAL}" if over else (f"color:{GOOD}" if d.target else "")
         rows.append(
-            f"<tr><td>{html.escape(d.local_date)}</td>"
+            f"<tr><td>{html.escape(_display_date(d.local_date))}</td>"
             f"<td class='num'>{round(d.calories)}</td>"
             f"<td class='num'>{target_txt}</td>"
             f"<td class='num' style='{color}'>{round(d.protein_g)}/"

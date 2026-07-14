@@ -90,17 +90,15 @@ discarded after estimation.
   **Demo:** edit yesterday's entry, see yesterday's totals change.
   *Done: ‹ › day navigation; future days blocked; entries editable on any day.*
 
-- [!] **S1 — SPIKE: vision-model estimation quality** *(de-risks Sprint 3; timeboxed 1 sitting)*
+- [x] **S1 — SPIKE: vision-model estimation quality** *(de-risks Sprint 3; timeboxed 1 sitting)* ✅ 2026-07-11
   Standalone script: send 5–10 test food photos (+ text variants) to the
   vision model; evaluate estimate quality; settle the JSON response schema
   and prompt. Throwaway code — findings recorded at the bottom of this file.
   **Demo:** written findings: model choice, prompt, schema, rough cost/scan.
-  *BLOCKED: needs an Anthropic API key (and ideally a few of the PO's real
-  meal photos). Ready to run once provided.*
-  *Scope note (from E2, 2026-07-05): test set must also include 2–3
-  nutrition-label photos (packaged products/drinks) — the prompt and JSON
-  schema should handle "transcribe the label" as well as "estimate the
-  plate" from day one.*
+  *CLOSED via live app testing instead of a standalone script (the feature
+  shipped first, so the spike became the PO's hands-on pass). Findings in
+  "Spike findings" below; headline: quality good, calories skew HIGH →
+  mitigation D4 (per-ingredient breakdown for auditability).*
 
 ## Sprint 2 — Goals
 *Sprint demo: calculator produces targets; Today shows "X kcal left". Covers F3.*
@@ -151,10 +149,10 @@ discarded after estimation.
   *Schema note: entries.source CHECK currently allows 'manual'|'ai' —
   migration 002 adds 'label' when this lands.*
 
-- [~] **T3.2 — Wizard: input + estimate card** *(covers: F1 incl. E2; depends: T3.1, T0.3)*
-  *CODE COMPLETE 2026-07-06 — `components/Wizard.tsx`: photo (rear-camera
-  hint) and/or text input; estimate card shows kind, assumptions,
-  confidence; label scans get the serving-size scaler. Live-verify with key.*
+- [x] **T3.2 — Wizard: input + estimate card** *(covers: F1 incl. E2; depends: T3.1, T0.3)* ✅ 2026-07-11
+  *CODE COMPLETE 2026-07-06; PO HANDS-ON VERIFIED 2026-07-11: real meal
+  photo → estimate card ✓; nutrition-label photo → transcribed card with
+  working portion scaler ✓ (one product tested).*
   Step 1: upload photo and/or type description. Step 2: estimate card
   showing foods, **visible assumptions** (portion, preparation), and macros.
   Label scans get a visibly different card ("read from label") and a
@@ -162,23 +160,21 @@ discarded after estimation.
   **Demo:** phone camera photo → estimate card; label photo → transcribed
   card with portion selector.
 
-- [~] **T3.3 — Wizard: review, edit, confirm** *(covers: F1 incl. E2; depends: T3.2, T1.1)*
-  *CODE COMPLETE 2026-07-06 — every value editable; Save posts through the
-  existing entries API with source 'ai'/'label'; nothing written before
-  confirm. Live-verify with key.*
+- [x] **T3.3 — Wizard: review, edit, confirm** *(covers: F1 incl. E2; depends: T3.2, T1.1)* ✅ 2026-07-11
+  *CODE COMPLETE 2026-07-06; PO HANDS-ON VERIFIED 2026-07-11: edited a
+  value, saved, entry appeared with the edited number and totals updated.*
   Step 3: every value editable. Step 4: confirm → saves through the existing
   entries API. Nothing is written until confirm.
   **Demo:** correct the AI's portion guess, save, entry appears in Today;
   same flow works for a scanned label.
 
-- [~] **T3.4 — Wizard failure paths** *(covers: F1; depends: T3.3)*
+- [x] **T3.4 — Wizard failure paths** *(covers: F1; depends: T3.3)* ✅ 2026-07-11
   Unidentifiable food → manual-entry fallback inside the wizard; API
   error/rate-limit messaging with retry; malformed model response rejected
   by validation, never saved.
-  *CODE COMPLETE 2026-07-06 — kind='unknown' → manual mode in-wizard; AI
-  errors mapped to clean 502 messages with retry + manual escape hatch;
-  malformed model output rejected by double validation (structured outputs
-  + Pydantic), tested with mocked failures.*
+  *CODE COMPLETE 2026-07-06; PO HANDS-ON VERIFIED 2026-07-11: non-food
+  photo → manual fallback ✓; PO also tried a prompt-injection-style fake
+  description — the model ignored the instructions and behaved correctly ✓.*
   **Demo:** photo of a non-food object lands you in manual fallback, not a crash.
 
 ## Sprint 4 — History, trends & weight
@@ -279,6 +275,23 @@ later when the app deploys (Sprint 7).*
   running total vs target.
   **Demo:** tap ✅ in Telegram, entry appears in the web app's Today list.
 
+- [ ] **T6.4 — Food library: quick-pick previously scanned foods** *(from E6; PROMOTED 2026-07-15 per PO; no dependencies)*
+  On the **manual add** option (Today's entry form and the wizard's manual
+  fallback), show a dropdown of previously logged foods — each option is
+  the food's AI-given name plus its total calories (e.g. "Laksa — 800
+  kcal"). Picking one pre-fills the whole form (kcal + macros), still
+  editable before save — portion varies day to day. No AI call, instant,
+  free.
+  **Design (PO-chosen variant of E6a — derive from history):** new backend
+  endpoint returning distinct previous entries grouped by description
+  (latest values win, ordered by frequency then recency, AI/label-scanned
+  foods included — they're the ones worth caching). Saves through the
+  single write path (`POST /entries`) with source='manual'. No schema
+  change needed. De-dup gotcha noted in E6 ("chicken rice" vs "chicken
+  rice large") accepted for v1 — the list IS your history.
+  **Demo:** scan a meal once; next day, add it again from the dropdown in
+  two taps with zero AI wait.
+
 ## Sprint 7 — Deploy (deferred 2026-07-09 per PO: local-first for now)
 *Sprint demo: the app at a public HTTPS URL on the phone's home screen;
 closes with T5.3, the full-phone smoke test.*
@@ -329,6 +342,45 @@ closes with T5.3, the full-phone smoke test.*
   "Entry created: id=4 … (8 ms)" in the file. Note: running the test suite
   also writes to this log (harmless in dev; revisit at deploy).*
 
+- [x] **D4 — Per-ingredient calorie breakdown in estimates** *(Sprint 6; PO request 2026-07-11 from S1 finding "calories feel over-estimated")* ✅ 2026-07-12
+  Schema + model gain `items: [{name, calories}]`; prompt now demands
+  BOTTOM-UP estimation (itemize components, total = sum of items, no
+  padding margin per component) alongside the realism guidance. Wizard
+  shows the breakdown as a table above the editable fields. Live-verified:
+  laksa → 7 components summing exactly to the total. NOTE: breakdown makes
+  totals *auditable*, not automatically lower — user can now challenge the
+  specific line that looks inflated.
+
+- [x] **D5 — DD-MMM-YYYY display dates** *(Sprint 6; PO request 2026-07-11)* ✅ 2026-07-12
+  `formatDate()` in api.ts + `_display_date()` in report.py: all user-facing
+  dates render as e.g. 12-Jul-2026 (Today header, History day rows, weight
+  list, goal history, report table/label). ISO stays the storage/API format.
+
+- [x] **D6 — History screen: calories before weight** *(Sprint 6; PO request 2026-07-11)* ✅ 2026-07-12
+  New order: Trends (calorie bars first, weight line second) → last-14-days
+  list → body-weight log card → report download link.
+  *2026-07-15: PO reports still seeing the weight tracker first — the code
+  order is verified calories-first, so this smells like a stale browser tab.
+  UAT step: hard-refresh (Ctrl+F5) on http://localhost:5173 and re-check;
+  reopen this task if weight is still first after that.*
+
+- [ ] **D7 — History: tap a day to see its meals** *(Sprint 6; PO request 2026-07-15 from UAT round 2)*
+  Each row in the last-14-days list should open up to show that day's
+  individual entries — what was eaten (including AI-scanned meals), each
+  with its kcal — not just the day total.
+  **How (sketch):** cheapest path reuses what exists — tapping a day row
+  either (a) expands inline, fetching that day's entries via the existing
+  entries API filtered by `local_date`, or (b) jumps to the Today tab
+  already set to that date (past-day view is built, T1.4). Decide at
+  implementation.
+  **Scope note for PO:** this shows the day's *meal list*. The
+  per-INGREDIENT breakdown (D4's items table) is shown at scan time but
+  NOT saved — entries store only description + macros (photos and raw AI
+  responses are discarded by design). If you want the ingredient lines
+  kept for past meals too, that's a schema change (new column/table) —
+  say so and it becomes its own task.
+  **Demo:** tap a past day in History, see the meals logged that day.
+
 ## Spike findings
 *(S1 results go here: model, prompt, response schema, cost per scan)*
 
@@ -340,3 +392,12 @@ closes with T5.3, the full-phone smoke test.*
   prompt behave as designed. STILL TO TEST (needs PO's real photos): photo
   estimates, nutrition-label transcription accuracy, cost per scan from
   usage data.
+- **2026-07-11, PO hands-on pass (photos):** meal-photo estimate ✓; label
+  transcription ✓ with working portion scaler (1 product); non-food photo →
+  correct fallback ✓; injection-style fake description ignored by the
+  model ✓. **Quality verdict: calories feel OVER-estimated** (likely pushed
+  by the prompt's "hawker portions are larger and oilier" realism bias).
+  Mitigation D4: per-ingredient calorie breakdown in the response so the
+  user can see which component inflates the total, plus a prompt line
+  against padding. Model stays `claude-opus-4-8` for now; revisit cost
+  after a week of real usage data in the Anthropic console.

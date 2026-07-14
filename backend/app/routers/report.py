@@ -8,7 +8,7 @@ The response is served as a download (Content-Disposition: attachment), so
 the browser saves a .html file the user can keep, email, or open offline.
 """
 
-from datetime import date
+from datetime import date, datetime
 
 from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
@@ -41,8 +41,10 @@ def download_report(weeks: int = 8) -> HTMLResponse:
     # Today's goal, for the target line on the intake chart.
     goal = active_goal(end)
 
+    # Dates in the label wear the app-wide display format (D5).
+    fmt = lambda iso: datetime.fromisoformat(iso).strftime("%d-%b-%Y")
     html_doc = build_report_html(
-        period_label=f"Last {weeks} weeks ({start} to {end})",
+        period_label=f"Last {weeks} weeks ({fmt(start)} to {fmt(end)})",
         weeks=t.weeks,
         weights=t.weights,
         days=days,

@@ -42,6 +42,9 @@ export interface EstimateResult {
   kind: "estimate" | "label" | "unknown";
   description: string;
   assumptions: string[]; // the AI's visible working — shown on the card
+  // Per-component calorie breakdown (empty for label/unknown) — lets the
+  // user see WHICH ingredient inflates a total they don't believe.
+  items: { name: string; calories: number }[];
   calories: number;
   protein_g: number;
   carbs_g: number;

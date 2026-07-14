@@ -117,6 +117,15 @@ decision had a written home.
   caught a broken .gitignore about to stage the API key — see Lessons #8.
   Hosting analysis done (Lambda vs EC2 vs Lightsail/App Runner) ahead of
   Sprint 7.
+- **PO acceptance testing (2026-07-11 → 12)** — First full hands-on pass of
+  the AI wizard by the PO: meal photo, label scan + portion scaler, edit
+  before save, non-food fallback, even an improvised prompt-injection
+  attempt (the model ignored it). Everything passed except the quality
+  verdict: **calories feel over-estimated**. That closed the long-open S1
+  spike (the shipped feature became the spike) and produced three same-day
+  improvements: D4 per-ingredient calorie breakdown (bottom-up estimation,
+  total = sum of items — see Lessons #10), D5 DD-MMM-YYYY display dates,
+  D6 History screen reordered calories-first. 53/53 tests green.
 
 ---
 
@@ -168,6 +177,14 @@ decision had a written home.
    confusing until diagnosed. → Own your servers: run `dev-backend.ps1` /
    `dev-frontend.ps1` in your own terminals; let the assistant verify via
    tests and HTTP calls.
+10. **When an AI estimate feels wrong, make it auditable before making it
+    "right".** The PO judged calorie totals over-estimated. Instead of just
+    tuning the prompt downward (invisible, unverifiable), the fix forces the
+    model to itemize every component and make the total equal the sum
+    (D4). The first live test came back *higher* than before — but now the
+    user can point at the exact line that's inflated ("I don't drink all
+    the broth") and edit it. → For AI outputs users must trust, showing the
+    working beats adjusting the answer.
 
 ---
 
