@@ -247,13 +247,19 @@ deploy, no router config. Telegram is the middleman: phone works anywhere,
 tracker stays on the PC (which must be on). Webhooks become a cheap swap
 later when the app deploys (Sprint 7).*
 
-- [ ] **T6.1 — Macro rings on Today** *(from E1; no dependencies)*
+- [x] **T6.1 — Macro rings on Today** *(from E1; no dependencies)* ✅ 2026-07-15
   Replace the plain-text totals bar with four SVG progress rings — calories,
   protein, carbs, fat — each filling toward its target (fitness-app style).
   Distinct over-target treatment (ring turns the danger color); no-goal days
   fall back to the current plain totals; colors from the validated dataviz
   palette, light AND dark mode. Reuse the ring in the HTML report if cheap.
   **Demo:** log a meal, watch the rings fill; go over target, ring turns red.
+  *Done: `components/rings.tsx` + ring CSS. Categorical slots 1–4
+  (blue/aqua/yellow/green) validated with the palette script against this
+  app's actual light/dark card surfaces; over-target = arc turns the status
+  red PLUS a "+N over" text signal (never color alone). "kcal left" line
+  kept under the rings. Report reuse skipped — not cheap enough to bundle.
+  Awaiting PO visual pass (UAT round 2).*
 
 - [!] **T6.2 — Telegram bot: polling skeleton + estimate reply** *(from E3)*
   Long-polling listener in the backend (started with the server or via a
@@ -275,7 +281,12 @@ later when the app deploys (Sprint 7).*
   running total vs target.
   **Demo:** tap ✅ in Telegram, entry appears in the web app's Today list.
 
-- [ ] **T6.4 — Food library: quick-pick previously scanned foods** *(from E6; PROMOTED 2026-07-15 per PO; no dependencies)*
+- [x] **T6.4 — Food library: quick-pick previously scanned foods** *(from E6; PROMOTED 2026-07-15 per PO; no dependencies)* ✅ 2026-07-15
+  *Done: GET `/entries/frequent` (groups history case-insensitively, newest
+  values win, most-logged first; 4 tests) + `components/QuickPick.tsx`
+  dropdown on Today's add form AND the wizard's manual fallback. Live-
+  verified against the real DB: 9 foods returned incl. scanned meals.
+  Awaiting PO hands-on (UAT round 2).*
   On the **manual add** option (Today's entry form and the wizard's manual
   fallback), show a dropdown of previously logged foods — each option is
   the food's AI-given name plus its total calories (e.g. "Laksa — 800
@@ -364,7 +375,12 @@ closes with T5.3, the full-phone smoke test.*
   UAT step: hard-refresh (Ctrl+F5) on http://localhost:5173 and re-check;
   reopen this task if weight is still first after that.*
 
-- [ ] **D7 — History: tap a day to see its meals** *(Sprint 6; PO request 2026-07-15 from UAT round 2)*
+- [x] **D7 — History: tap a day to see its meals** *(Sprint 6; PO request 2026-07-15 from UAT round 2)* ✅ 2026-07-15
+  *Done: day rows expand/collapse in place (chevron, tap anywhere on the
+  row); meals fetched via the existing entries API on first open, cached
+  after; 📷 marks AI/label-scanned entries. Ingredient-level persistence
+  NOT included (see scope note) — awaiting PO call on whether to keep
+  breakdowns. Awaiting PO hands-on (UAT round 2).*
   Each row in the last-14-days list should open up to show that day's
   individual entries — what was eaten (including AI-scanned meals), each
   with its kcal — not just the day total.

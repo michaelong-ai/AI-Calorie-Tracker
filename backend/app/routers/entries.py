@@ -90,6 +90,66 @@ def list_entries(local_date: str) -> list[Entry]:
         conn.close()
 
 
+class FrequentFood(BaseModel):
+    """One previously-logged food, ready to pre-fill the entry form (T6.4).
+
+    Carries the same nutrition fields as an entry plus how many times it has
+    been logged — the UI sorts by that, so everyday foods surface first.
+    """
+
+    description: str
+    calories: float
+    protein_g: float
+    carbs_g: float
+    fat_g: float
+    times_logged: int
+
+
+@router.get("/frequent")
+def frequent_foods(limit: int = 20) -> list[FrequentFood]:
+    """The user's food library, derived from their own history (T6.4, from E6).
+
+    Groups every past entry by its description (case-insensitively, so
+    "Laksa" and "laksa" count as one food), takes the MOST RECENT entry's
+    values for each food (portions drift over time — the last log is the
+    best guess), and returns the foods most-logged first. The frontend shows
+    this as a quick-pick dropdown on the manual add form: re-logging a known
+    meal costs two taps and zero AI calls.
+
+    `limit` caps the list (default 20) so the dropdown stays scannable.
+    """
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            # Two steps in one query:
+            #   1. The inner SELECT groups all my entries by normalized
+            #      description and, per food, notes how often it was logged
+            #      and the id of its newest entry (MAX(id) — ids only grow).
+            #   2. The outer SELECT joins back to the entries table to pull
+            #      that newest entry's actual numbers.
+            # This "join back to the max row" idiom is the explicit way to
+            # get "latest values win" — clearer than relying on SQLite's
+            # bare-column-with-MAX() quirk.
+            """
+            SELECT e.description, e.calories, e.protein_g, e.carbs_g,
+                   e.fat_g, f.times_logged
+            FROM entries AS e
+            JOIN (
+                SELECT MAX(id) AS newest_id, COUNT(*) AS times_logged
+                FROM entries
+                WHERE user_id = ?
+                GROUP BY LOWER(TRIM(description))
+            ) AS f ON e.id = f.newest_id
+            ORDER BY f.times_logged DESC, e.id DESC
+            LIMIT ?
+            """,
+            (get_current_user_id(), limit),
+        ).fetchall()
+        return [FrequentFood(**dict(row)) for row in rows]
+    finally:
+        conn.close()
+
+
 @router.post("", status_code=201)  # 201 = "Created", the right code for POST
 def create_entry(payload: EntryInput) -> Entry:
     #You Match this by defining the pydantic class EntryInput above and putting that as the request variable)

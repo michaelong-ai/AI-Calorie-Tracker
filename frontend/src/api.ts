@@ -11,6 +11,7 @@ import type {
   Entry,
   EntryInput,
   EstimateResult,
+  FrequentFood,
   Goal,
   GoalInput,
   TrendsData,
@@ -83,6 +84,15 @@ export function updateEntry(id: number, input: EntryInput): Promise<Entry> {
 /** Delete an entry permanently. Returns nothing (HTTP 204). */
 export function deleteEntry(id: number): Promise<void> {
   return request(`/entries/${id}`, { method: "DELETE" });
+}
+
+/**
+ * The user's food library (T6.4): previously-logged foods, most-eaten first,
+ * each with the values from its latest log. Powers the quick-pick dropdown
+ * on the manual add form — re-logging a known meal skips the AI entirely.
+ */
+export function fetchFrequentFoods(): Promise<FrequentFood[]> {
+  return request("/entries/frequent");
 }
 
 // --- Goals (Sprint 2) -----------------------------------------------------------

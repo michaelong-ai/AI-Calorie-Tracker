@@ -14,6 +14,7 @@
 import { useState } from "react";
 import { createEntry, estimateMeal } from "../api";
 import type { Entry, EstimateResult } from "../types";
+import QuickPick from "./QuickPick";
 
 interface WizardProps {
   date: string; // the local_date the entry will be logged under
@@ -167,6 +168,20 @@ function Wizard({ date, onSaved, onClose }: WizardProps) {
               The AI couldn't identify food in that input — type the values
               yourself, or go back and try another photo.
             </p>
+            {/* Food library (T6.4): the manual fallback also offers the
+                quick-pick — often the AI failed on a food you've logged
+                before anyway. */}
+            <QuickPick
+              onPick={(f) =>
+                setValues({
+                  description: f.description,
+                  calories: String(f.calories),
+                  protein_g: String(f.protein_g),
+                  carbs_g: String(f.carbs_g),
+                  fat_g: String(f.fat_g),
+                })
+              }
+            />
           </>
         ) : (
           <>

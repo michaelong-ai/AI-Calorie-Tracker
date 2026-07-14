@@ -16,7 +16,9 @@ export interface Entry {
   fat_g: number;
   logged_at_utc: string; // e.g. "2026-07-05T12:31:00+00:00"
   local_date: string;    // e.g. "2026-07-05" — the day the user experienced
-  source: "manual" | "ai";
+  // Where the numbers came from: typed by hand, AI photo estimate, or
+  // transcribed from a nutrition label (migration 002).
+  source: "manual" | "ai" | "label";
 }
 
 // What the frontend sends when creating or editing an entry. It's the Entry
@@ -53,6 +55,18 @@ export interface EstimateResult {
   // can ask "how much did you have?" and scale.
   label_basis: { per: "100g" | "serving" | "package"; serving_size_g: number | null } | null;
   confidence: "low" | "medium" | "high";
+}
+
+// One previously-logged food from GET /entries/frequent (T6.4): the user's
+// food library, derived from history. Picking one pre-fills the entry form
+// with the values from its most recent log — no AI call needed.
+export interface FrequentFood {
+  description: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  times_logged: number; // how often it's been eaten — the dropdown sort key
 }
 
 // Summed nutrition for a set of entries — used by the daily totals bar.

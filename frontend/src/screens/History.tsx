@@ -12,12 +12,13 @@ import {
   fetchDaySummaries,
   fetchTrends,
   formatDate,
+  listEntries,
   listWeights,
   logWeight,
   reportUrl,
   toLocalDate,
 } from "../api";
-import type { DaySummary, Goal, TrendsData, WeightEntry } from "../types";
+import type { DaySummary, Entry, Goal, TrendsData, WeightEntry } from "../types";
 import { BarChart, LineChart } from "../components/charts";
 
 // How far back the day list looks. 14 days ≈ two weeks of context without
@@ -38,6 +39,11 @@ function History() {
   const [goal, setGoal] = useState<Goal | null>(null); // for the target line
   const [weightInput, setWeightInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // D7: which day row is expanded to show its meals (null = none), plus a
+  // cache of already-fetched meal lists keyed by date — so re-opening a day
+  // doesn't refetch it.
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const [dayMeals, setDayMeals] = useState<Record<string, Entry[]>>({});
 
   /** (Re)load everything — also called after logging a weight so the trend
    *  chart updates immediately. */
@@ -82,6 +88,25 @@ function History() {
       fetchTrends(TREND_WEEKS).then(setTrends).catch(() => {});
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+
+  /** D7: expand/collapse a day row; fetch its meals on first open. */
+  async function toggleDay(date: string) {
+    if (expandedDay === date) {
+      setExpandedDay(null); // tapping the open day closes it
+      return;
+    }
+    setExpandedDay(date);
+    // Only hit the API the first time — the same entries endpoint the Today
+    // screen uses, just pointed at a past date.
+    if (!dayMeals[date]) {
+      try {
+        const meals = await listEntries(date);
+        setDayMeals((cache) => ({ ...cache, [date]: meals }));
+      } catch (e) {
+        setError((e as Error).message);
+      }
     }
   }
 
@@ -162,22 +187,57 @@ function History() {
         <p className="muted">No logged days in this period yet.</p>
       ) : (
         days.map((day) => (
-          <div className="card day-row" key={day.local_date}>
-            <div className="entry-main">
-              <span>
-                {formatDate(day.local_date)}
-                <span className="muted"> · {day.entry_count} entr{day.entry_count === 1 ? "y" : "ies"}</span>
+          <div className="card" key={day.local_date}>
+            {/* The summary row doubles as the expand/collapse control (D7):
+                tap to see the individual meals behind the day total. */}
+            <div
+              className="day-row"
+              role="button"
+              aria-expanded={expandedDay === day.local_date}
+              onClick={() => toggleDay(day.local_date)}
+            >
+              <span className="muted day-chevron">
+                {expandedDay === day.local_date ? "▾" : "▸"}
               </span>
-              <span className="muted">
-                P {Math.round(day.protein_g)}g · C {Math.round(day.carbs_g)}g · F{" "}
-                {Math.round(day.fat_g)}g
+              <div className="entry-main">
+                <span>
+                  {formatDate(day.local_date)}
+                  <span className="muted"> · {day.entry_count} entr{day.entry_count === 1 ? "y" : "ies"}</span>
+                </span>
+                <span className="muted">
+                  P {Math.round(day.protein_g)}g · C {Math.round(day.carbs_g)}g · F{" "}
+                  {Math.round(day.fat_g)}g
+                </span>
+              </div>
+              {/* kcal vs the target active THAT day; plain kcal if none. */}
+              <span className={`day-kcal ${adherenceClass(day)}`}>
+                {Math.round(day.calories)}
+                {day.target ? ` / ${Math.round(day.target.calories_target)}` : ""} kcal
               </span>
             </div>
-            {/* kcal vs the target active THAT day; plain kcal if none. */}
-            <span className={`day-kcal ${adherenceClass(day)}`}>
-              {Math.round(day.calories)}
-              {day.target ? ` / ${Math.round(day.target.calories_target)}` : ""} kcal
-            </span>
+
+            {/* The drill-down: that day's meals, one line each. 📷 marks
+                entries that came from an AI scan (photo or label) rather
+                than manual typing. */}
+            {expandedDay === day.local_date && (
+              <div className="day-meals">
+                {!dayMeals[day.local_date] ? (
+                  <p className="muted">Loading…</p>
+                ) : dayMeals[day.local_date].length === 0 ? (
+                  <p className="muted">No entries on this day.</p>
+                ) : (
+                  dayMeals[day.local_date].map((meal) => (
+                    <p key={meal.id} className="day-meal">
+                      <span>
+                        {meal.source !== "manual" && "📷 "}
+                        {meal.description}
+                      </span>
+                      <span className="muted">{Math.round(meal.calories)} kcal</span>
+                    </p>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         ))
       )}

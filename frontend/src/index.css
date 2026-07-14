@@ -280,11 +280,30 @@ button.danger {
   cursor: pointer;
 }
 
-/* One past-day row: date+macros left, kcal-vs-target right. */
+/* One past-day row: chevron + date+macros left, kcal-vs-target right.
+ * The whole row is tappable (D7: expands to show that day's meals). */
 .day-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  cursor: pointer;
+}
+.day-chevron {
+  font-size: 0.8rem;
+  width: 0.9rem; /* fixed width so rows don't shift when ▸ becomes ▾ */
+}
+/* The expanded meal list under a day row (D7). */
+.day-meals {
+  margin-top: 0.6rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+.day-meal {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0.3rem 0;
+  font-size: 0.9rem;
 }
 .day-kcal {
   white-space: nowrap; /* keep "1830 / 2200 kcal" on one line */
@@ -315,6 +334,9 @@ button.danger {
  */
 :root {
   --chart-series-1: #2a78d6;   /* blue — weight line & intake bars (light) */
+  --chart-series-2: #1baf7a;   /* aqua — protein ring */
+  --chart-series-3: #eda100;   /* yellow — carbs ring */
+  --chart-series-4: #008300;   /* green — fat ring */
   --chart-grid: #e1e0d9;       /* hairline gridlines */
   --chart-axis: #898781;       /* muted axis labels */
   --chart-target: #d03b3b;     /* status:critical — the goal reference line */
@@ -322,7 +344,10 @@ button.danger {
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --chart-series-1: #3987e5; /* blue stepped for the dark surface */
+    --chart-series-1: #3987e5; /* the same hues stepped for the dark surface */
+    --chart-series-2: #199e70;
+    --chart-series-3: #c98500;
+    --chart-series-4: #008300;
     --chart-grid: #2c2c2a;
     --chart-axis: #898781;
     --chart-target: #d03b3b;
@@ -355,6 +380,52 @@ button.danger {
 /* The value/target callouts wear ink tokens, never the series color. */
 .chart-value { fill: var(--text); font-size: 9px; font-weight: 600; }
 .chart-target { stroke: var(--chart-target); stroke-width: 1.5; stroke-dasharray: 4 3; }
+
+/* --- Macro rings (T6.1) ---------------------------------------------------------
+ * Four categorical palette slots in fixed order (validated with the dataviz
+ * palette script against this app's light and dark card surfaces). Each ring
+ * also carries a text label, so identity never depends on color alone.
+ */
+.rings {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* four equal rings across the card */
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.ring svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+/* The full-circle background track — recessive, same tone as gridlines. */
+.ring-track {
+  fill: none;
+  stroke: var(--chart-grid);
+}
+/* The progress arc wears its metric's palette slot… */
+.ring-arc {
+  fill: none;
+}
+.ring-arc.s1 { stroke: var(--chart-series-1); }
+.ring-arc.s2 { stroke: var(--chart-series-2); }
+.ring-arc.s3 { stroke: var(--chart-series-3); }
+.ring-arc.s4 { stroke: var(--chart-series-4); }
+/* …until the target is exceeded — then the reserved status red takes over
+ * (paired with a "+N over" text signal in the label below). */
+.ring-arc.over { stroke: var(--chart-target); }
+/* Numbers and labels wear ink tokens, never the series color. */
+.ring-value {
+  fill: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+}
+.ring-label {
+  margin: 0.25rem 0 0;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
 
 /* --- AI wizard (Sprint 3) ------------------------------------------------------ */
 

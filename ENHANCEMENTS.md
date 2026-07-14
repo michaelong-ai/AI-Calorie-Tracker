@@ -14,7 +14,7 @@ that picking it up weeks later needs no archaeology.
 
 ## UI / UX
 
-- [>] **E1 — Macro rings: friendlier daily tracker display** *(PO, 2026-07-05 — PROMOTED 2026-07-09 into Sprint 6 as T6.1)*
+- [x] **E1 — Macro rings: friendlier daily tracker display** *(PO, 2026-07-05 — PROMOTED 2026-07-09 into Sprint 6 as T6.1; SHIPPED 2026-07-15)*
   Replace the plain-text totals bar on Today with **circular progress rings**
   — one ring per metric (calories, protein, carbs, fat), each filling toward
   its target with its own color, in the style fitness apps use.
@@ -59,7 +59,7 @@ that picking it up weeks later needs no archaeology.
   customer!), and a deployed backend with a public URL (depends on T0.4).
   Requires webhook reachability — pairs naturally with E4.
 
-- [>] **E6 — Food library: cache frequent foods, skip the LLM** *(PO, 2026-07-11, mid-testing — PROMOTED 2026-07-15 into Sprint 6 as T6.4, as variant (a) derive-from-history: a dropdown of previously scanned foods with AI name + calories on the manual add form)*
+- [x] **E6 — Food library: cache frequent foods, skip the LLM** *(PO, 2026-07-11, mid-testing — PROMOTED 2026-07-15 into Sprint 6 as T6.4, as variant (a) derive-from-history: a dropdown of previously scanned foods with AI name + calories on the manual add form; SHIPPED 2026-07-15)*
   A growing list of foods the user has eaten before, selectable in one tap —
   "if I ate it before, I shouldn't need to call the AI again."
   **Why:** three wins at once — instant logging for repeat meals (no 5–15s

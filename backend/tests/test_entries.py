@@ -91,3 +91,46 @@ def test_delete_removes_the_entry(client):
 
 def test_delete_missing_entry_gives_404(client):
     assert client.delete("/entries/999").status_code == 404
+
+
+# --- Food library: GET /entries/frequent (T6.4) ---------------------------------
+
+
+def test_frequent_groups_and_sorts_by_times_logged(client):
+    """The food eaten most often must come first, with a per-food count."""
+    # Laksa twice, toast once → laksa leads the list.
+    client.post("/entries", json={**VALID_ENTRY, "description": "Laksa"})
+    client.post("/entries", json={**VALID_ENTRY, "description": "Laksa"})
+    client.post("/entries", json={**VALID_ENTRY, "description": "Kaya toast"})
+
+    foods = client.get("/entries/frequent").json()
+
+    assert [f["description"] for f in foods] == ["Laksa", "Kaya toast"]
+    assert foods[0]["times_logged"] == 2
+    assert foods[1]["times_logged"] == 1
+
+
+def test_frequent_groups_case_insensitively_latest_values_win(client):
+    """"laksa" and "Laksa" are one food, carrying the NEWEST log's numbers
+    (portions drift — the last log is the best default)."""
+    client.post("/entries", json={**VALID_ENTRY, "description": "laksa", "calories": 600})
+    client.post("/entries", json={**VALID_ENTRY, "description": "Laksa", "calories": 800})
+
+    foods = client.get("/entries/frequent").json()
+
+    assert len(foods) == 1
+    assert foods[0]["times_logged"] == 2
+    assert foods[0]["calories"] == 800  # the later entry's value, not the first
+
+
+def test_frequent_empty_history_gives_empty_list(client):
+    """First-ever launch: no history yet → empty list, not an error."""
+    assert client.get("/entries/frequent").json() == []
+
+
+def test_frequent_respects_limit(client):
+    """?limit=N caps the list so the dropdown stays scannable."""
+    for name in ["a", "b", "c"]:
+        client.post("/entries", json={**VALID_ENTRY, "description": name})
+
+    assert len(client.get("/entries/frequent", params={"limit": 2}).json()) == 2

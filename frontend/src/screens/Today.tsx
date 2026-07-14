@@ -23,6 +23,8 @@ import {
 } from "../api";
 import type { Entry, EntryInput, Goal, Totals } from "../types";
 import Wizard from "../components/Wizard";
+import { MacroRings } from "../components/rings";
+import QuickPick from "../components/QuickPick";
 
 // The empty form used when adding a new entry. Numbers start as "" (empty
 // string) because HTML inputs hold text; we convert to numbers on save.
@@ -189,43 +191,45 @@ function Today() {
         </button>
       </div>
 
-      {/* Totals bar (T1.3 + T2.3): consumed, and — when a goal governs this
-          day — what's left. Days before the first goal show totals only. */}
+      {/* Totals (T1.3 + T2.3 + T6.1): when a goal governs this day, four
+          progress rings show each metric filling toward its target; days
+          before the first goal fall back to the plain-text totals (a ring
+          with no target has nothing to fill toward). */}
       <div className="card">
-        <div className="totals">
-          <div>
-            <strong>{Math.round(totals.calories)}</strong>
-            <span className="muted">
-              {goal ? ` / ${Math.round(goal.calories_target)} kcal` : " kcal"}
-            </span>
-          </div>
-          <div className="muted">
-            P {Math.round(totals.protein_g)}
-            {goal ? `/${Math.round(goal.protein_g_target)}` : ""}g · C{" "}
-            {Math.round(totals.carbs_g)}
-            {goal ? `/${Math.round(goal.carbs_g_target)}` : ""}g · F{" "}
-            {Math.round(totals.fat_g)}
-            {goal ? `/${Math.round(goal.fat_g_target)}` : ""}g
-          </div>
-        </div>
         {goal ? (
-          // The "what do I have left today" line — the number the user
-          // actually decides dinner by. Negative = over target.
-          <p className={totals.calories > goal.calories_target ? "error" : "muted"}>
-            {totals.calories <= goal.calories_target
-              ? `${Math.round(goal.calories_target - totals.calories)} kcal left · ` +
-                `${Math.max(0, Math.round(goal.protein_g_target - totals.protein_g))} g protein to go`
-              : `${Math.round(totals.calories - goal.calories_target)} kcal over target`}
-          </p>
-        ) : (
-          // Empty state (T5.2): no goal governs this day. Explain why there
-          // is no target instead of leaving a bare number.
-          !loading && (
-            <p className="muted">
-              No goal set for this day — use the <strong>Goals</strong> tab to
-              calculate your targets.
+          <>
+            <MacroRings totals={totals} goal={goal} />
+            {/* The "what do I have left today" line — the number the user
+                actually decides dinner by. Kept alongside the rings because
+                "620 left" is faster to act on than reading an arc. */}
+            <p className={totals.calories > goal.calories_target ? "error" : "muted"}>
+              {totals.calories <= goal.calories_target
+                ? `${Math.round(goal.calories_target - totals.calories)} kcal left · ` +
+                  `${Math.max(0, Math.round(goal.protein_g_target - totals.protein_g))} g protein to go`
+                : `${Math.round(totals.calories - goal.calories_target)} kcal over target`}
             </p>
-          )
+          </>
+        ) : (
+          <>
+            <div className="totals">
+              <div>
+                <strong>{Math.round(totals.calories)}</strong>
+                <span className="muted"> kcal</span>
+              </div>
+              <div className="muted">
+                P {Math.round(totals.protein_g)}g · C {Math.round(totals.carbs_g)}g · F{" "}
+                {Math.round(totals.fat_g)}g
+              </div>
+            </div>
+            {/* Empty state (T5.2): no goal governs this day. Explain why
+                there is no target instead of leaving a bare number. */}
+            {!loading && (
+              <p className="muted">
+                No goal set for this day — use the <strong>Goals</strong> tab to
+                calculate your targets.
+              </p>
+            )}
+          </>
         )}
       </div>
 
@@ -262,6 +266,22 @@ function Today() {
       {editing !== null ? (
         <div className="card form">
           <h3>{editing === "new" ? "Add entry" : "Edit entry"}</h3>
+          {/* Food library (T6.4): when ADDING, offer previously-logged
+              foods as a one-tap pre-fill — no AI call for repeat meals.
+              Hidden while editing (the fields already hold that entry). */}
+          {editing === "new" && (
+            <QuickPick
+              onPick={(f) =>
+                setForm({
+                  description: f.description,
+                  calories: String(f.calories),
+                  protein_g: String(f.protein_g),
+                  carbs_g: String(f.carbs_g),
+                  fat_g: String(f.fat_g),
+                })
+              }
+            />
+          )}
           <label>
             Description
             <input
