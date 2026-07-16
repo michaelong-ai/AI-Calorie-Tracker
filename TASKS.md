@@ -231,10 +231,14 @@ discarded after estimation.
   tab to calculate your targets"). PO fresh-phone walkthrough happens as
   part of T5.3.*
 
-- [ ] **T5.3 — End-to-end smoke pass** *(depends: everything)*
+- [x] **T5.3 — End-to-end smoke pass** *(depends: everything)* ✅ 2026-07-15 (desktop)
   Full loop on the real phone: calculate goal → photo-log a meal → check
   totals → log weight → export report. Fix papercuts found.
   **Demo:** the loop completes without touching a desktop.
+  *PO VERIFIED 2026-07-15 on desktop: full loop (goal → scan → edit → save
+  → totals/rings → weight → History → report) with no dead ends; offline
+  report opened with charts intact and DD-MMM-YYYY dates. The phone leg
+  needs a public URL — folded into T7.2's demo (deploy).*
 
 ## Sprint 6 — Telegram on local *(scoped 2026-07-09 from E1/E3; re-scoped same day: deploy removed per PO — local-first, Telegram first)*
 *Sprint demo: from your phone, anywhere, send a meal photo to your Telegram
@@ -259,7 +263,7 @@ later when the app deploys (Sprint 7).*
   app's actual light/dark card surfaces; over-target = arc turns the status
   red PLUS a "+N over" text signal (never color alone). "kcal left" line
   kept under the rings. Report reuse skipped — not cheap enough to bundle.
-  Awaiting PO visual pass (UAT round 2).*
+  PO VERIFIED 2026-07-15 (UAT round 2).*
 
 - [!] **T6.2 — Telegram bot: polling skeleton + estimate reply** *(from E3)*
   Long-polling listener in the backend (started with the server or via a
@@ -286,7 +290,7 @@ later when the app deploys (Sprint 7).*
   values win, most-logged first; 4 tests) + `components/QuickPick.tsx`
   dropdown on Today's add form AND the wizard's manual fallback. Live-
   verified against the real DB: 9 foods returned incl. scanned meals.
-  Awaiting PO hands-on (UAT round 2).*
+  PO VERIFIED 2026-07-15 (UAT round 2).*
   On the **manual add** option (Today's entry form and the wizard's manual
   fallback), show a dropdown of previously logged foods — each option is
   the food's AI-given name plus its total calories (e.g. "Laksa — 800
@@ -361,6 +365,8 @@ closes with T5.3, the full-phone smoke test.*
   laksa → 7 components summing exactly to the total. NOTE: breakdown makes
   totals *auditable*, not automatically lower — user can now challenge the
   specific line that looks inflated.
+  *UAT round 2 (2026-07-15): quality judgment still open — PO to eyeball
+  breakdowns on real meals over the coming days and flag inflated lines.*
 
 - [x] **D5 — DD-MMM-YYYY display dates** *(Sprint 6; PO request 2026-07-11)* ✅ 2026-07-12
   `formatDate()` in api.ts + `_display_date()` in report.py: all user-facing
@@ -370,17 +376,15 @@ closes with T5.3, the full-phone smoke test.*
 - [x] **D6 — History screen: calories before weight** *(Sprint 6; PO request 2026-07-11)* ✅ 2026-07-12
   New order: Trends (calorie bars first, weight line second) → last-14-days
   list → body-weight log card → report download link.
-  *2026-07-15: PO reports still seeing the weight tracker first — the code
-  order is verified calories-first, so this smells like a stale browser tab.
-  UAT step: hard-refresh (Ctrl+F5) on http://localhost:5173 and re-check;
-  reopen this task if weight is still first after that.*
+  *2026-07-15: PO reported weight-first — was indeed a stale browser tab;
+  after hard refresh PO VERIFIED calories-first order same day. Closed.*
 
 - [x] **D7 — History: tap a day to see its meals** *(Sprint 6; PO request 2026-07-15 from UAT round 2)* ✅ 2026-07-15
   *Done: day rows expand/collapse in place (chevron, tap anywhere on the
   row); meals fetched via the existing entries API on first open, cached
   after; 📷 marks AI/label-scanned entries. Ingredient-level persistence
   NOT included (see scope note) — awaiting PO call on whether to keep
-  breakdowns. Awaiting PO hands-on (UAT round 2).*
+  breakdowns. PO VERIFIED 2026-07-15 (UAT round 2).*
   Each row in the last-14-days list should open up to show that day's
   individual entries — what was eaten (including AI-scanned meals), each
   with its kcal — not just the day total.

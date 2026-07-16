@@ -4,7 +4,7 @@ A **mobile-first web app** that turns a photo of your meal — or of a
 nutrition label — into validated calories and macros via a **vision AI**,
 tracked against **TDEE-based targets**. Built AI-assisted ("vibe coded"),
 but with the discipline of a real project: a functional spec agreed before
-any code, a living sprint backlog, **53 passing tests**, and a written
+any code, a living sprint backlog, **57 passing tests**, and a written
 retrospective of every decision and lesson.
 
 **Headline:** from empty folder to feature-complete in 6 sprints — photo →
@@ -20,6 +20,7 @@ honestly marked *low*.
 
 - [What this project does](#what-this-project-does)
 - [Architecture](#architecture)
+- [How it works, in plain language](#how-it-works-in-plain-language)
 - [The tracker core](#1-the-tracker-core--one-write-path)
 - [Goals & TDEE](#2-goals--tdee-never-overwrite-history)
 - [The AI estimation pipeline](#3-the-ai-estimation-pipeline)
@@ -88,6 +89,76 @@ Two rules shape the whole system: the **API key lives only server-side**
 path** — manual entry, AI estimates, and label scans all save through the
 same `POST /entries`, so validation, logging, and review-before-save are
 inherited by every input method (including the upcoming Telegram bot).
+
+---
+
+## How it works, in plain language
+
+*A summary for someone who knows Python and SQL but hasn't built a
+production web app before.*
+
+**The shape: three pieces talking over HTTP.** The React frontend is the
+only part a user ever touches; it runs in the browser and can't be trusted
+with secrets. It never talks to the database or the AI directly — it only
+sends HTTP requests to the FastAPI backend, which does the real work.
+Think of the backend as a waiter: the browser (customer) never walks into
+the kitchen (database); it asks the waiter, and the waiter brings back a
+plate of JSON.
+
+**How FastAPI works.** A server program (Uvicorn) imports the `app` object
+from `backend/app/main.py` and then *stays running*, handing every incoming
+request to it — unlike a script, a server never exits. FastAPI's core trick
+is the decorator: `@router.get("/entries")` above a plain Python function
+means "when a GET request arrives at /entries, run this function"; whatever
+the function returns is auto-converted to JSON. Around that, three
+mechanisms do the production heavy-lifting:
+
+- **Pydantic models validate input before your code runs.** Declaring
+  `calories: float = Field(ge=0)` means a request with negative calories is
+  rejected with a clear error automatically — no hand-written `if` checks.
+- **Routers keep features separate** — entries, goals, weights, estimate
+  each live in their own file under `app/routers/`, plugged into the app
+  with one `include_router` line each.
+- **Middleware wraps every request** — one layer solves CORS (the browser
+  rule that blocks a page on port 5173 from calling an API on port 8000
+  unless the API consents), another times every request and writes one log
+  line. The `lifespan` hook runs the database migrations once at startup,
+  before the first request can arrive.
+
+A free bonus: FastAPI generates interactive docs from those models at
+`/docs`, where every endpoint can be tested by hand without the frontend.
+
+**How the database is accessed — deliberately no ORM.** Most production
+apps use an ORM (SQLAlchemy etc.) that hides SQL behind Python objects.
+This project uses Python's built-in `sqlite3` and plain SQL on purpose: the
+SQL stays visible, which is the point of a learning project. The structure
+that keeps this safe lives in `app/db.py`:
+
+- `get_connection()` is the **single door** to the database — every query in
+  the app goes through it, so configuration (foreign keys ON, rows
+  addressable by column name) is guaranteed everywhere.
+- Queries use `?` **parameter binding** — never string concatenation — which
+  is what prevents SQL injection.
+- The schema is built by **numbered migration files** (`migrations/001_….sql`,
+  `002_….sql`): a `schema_migrations` table records which files have run,
+  and startup applies only the missing ones, in order. Delete the database
+  file and restart → a fresh, fully-built schema. Pull new code with a new
+  migration → just that one applies.
+- `app/auth.py` is the **future-login slot**: today it always answers
+  "user 1", but because every query already filters on `user_id`, adding
+  real accounts later changes this one function — not the data model.
+
+**How deployment would work (Sprint 7, e.g. AWS Lightsail).** Locally the
+app is two dev servers (Uvicorn + Vite). In production, Vite disappears:
+`npm run build` compiles the React app into plain static files, and FastAPI
+serves them itself — one program, one address, which also makes the CORS
+problem vanish (same origin). A Lightsail instance is just a small always-on
+Linux box with a fixed public IP: clone the repo, install Python, put the
+API key in `.env` on the server, register Uvicorn with `systemd` (so it
+survives crashes and reboots), and put HTTPS in front. The SQLite file
+simply lives on the instance's disk — zero database administration, right
+for one user. The documented upgrade path (see `ARCHITECTURE.md`) is a
+mechanical swap to Postgres if multiple servers ever need to share data.
 
 ---
 
@@ -216,13 +287,13 @@ label scan would have carried `label_basis` for serving-size math instead.
 
 ```
 backend $ python -m pytest tests -q
-.....................................................            [100%]
-53 passed in 2.57s
+.........................................................        [100%]
+57 passed in 2.77s
 ```
 
 **Highlights:**
 
-- **53 tests**, each pinning a spec promise: goal versioning ("July 5 is
+- **57 tests**, each pinning a spec promise: goal versioning ("July 5 is
   judged by July 5's goal, even after a new goal exists"), day-boundary
   filtering, negative-calorie rejection, the report's zero-external-references
   invariant, and every AI failure path (with the model mocked — tests cost
@@ -285,7 +356,7 @@ Calorie_tracker/
 │   │   ├── routers/             # one file per feature: entries, goals, weights, days, trends, estimate, report
 │   │   └── services/            # pure logic: tdee.py, estimation.py (AI), report.py + report_charts.py
 │   ├── migrations/              # numbered, append-only .sql files (001 schema, 002 label source)
-│   ├── tests/                   # 53 pytest tests, temp DB per test, AI mocked
+│   ├── tests/                   # 57 pytest tests, temp DB per test, AI mocked
 │   └── .env.example             # template: ANTHROPIC_API_KEY, ESTIMATE_MODEL
 ├── frontend/src/
 │   ├── App.tsx                  # 3-tab shell (Today / Goals / History) + health dot
@@ -354,7 +425,7 @@ Tests: `./run-tests.ps1` (no API key or network needed — the AI is mocked).
 | Tests | pytest + FastAPI TestClient | Temp database per test; AI mocked; suite runs in ~3 s |
 | Logging | stdlib `logging` + rotating file | The "witness" for when the app runs where no terminal exists |
 
-**Status:** feature-complete for local use (Sprints 0–5 ✅). In progress:
-Sprint 6 — macro rings + a Telegram bot (long-polling, so it works without
-a deploy). Deferred: Sprint 7 — AWS deployment. Live status in
-[TASKS.md](TASKS.md).
+**Status:** feature-complete for local use (Sprints 0–5 ✅; macro rings,
+History day drill-down, and a zero-AI food quick-pick shipped in Sprint 6).
+Remaining: the Telegram bot (long-polling, so it works without a deploy),
+then Sprint 7 — AWS deployment. Live status in [TASKS.md](TASKS.md).
