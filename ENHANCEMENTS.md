@@ -45,7 +45,7 @@ that picking it up weeks later needs no archaeology.
   photos in the S1 spike test set so prompt + schema cover this case from
   day one.
 
-- [>] **E3 — Telegram bot: log meals by sending a photo in chat** *(PO, 2026-07-05 — PROMOTED 2026-07-09 into Sprint 6 as T6.2 + T6.3, re-scoped to LONG POLLING so it runs against the local server with no deploy; webhook swap deferred to Sprint 7)*
+- [x] **E3 — Telegram bot: log meals by sending a photo in chat** *(PO, 2026-07-05 — PROMOTED 2026-07-09 into Sprint 6 as T6.2 + T6.3, re-scoped to LONG POLLING so it runs against the local server with no deploy; SHIPPED 2026-07-18. Webhook swap still deferred to Sprint 7 deploy.)*
   Integrate with Telegram so a meal (or label) photo sent to a bot chat gets
   estimated and logged — no need to open the web app at all.
   **Why:** Telegram is already open when eating out; removing the

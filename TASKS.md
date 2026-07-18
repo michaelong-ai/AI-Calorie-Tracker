@@ -265,7 +265,7 @@ later when the app deploys (Sprint 7).*
   kept under the rings. Report reuse skipped — not cheap enough to bundle.
   PO VERIFIED 2026-07-15 (UAT round 2).*
 
-- [!] **T6.2 — Telegram bot: polling skeleton + estimate reply** *(from E3)*
+- [x] **T6.2 — Telegram bot: polling skeleton + estimate reply** *(from E3)* ✅ 2026-07-18
   Long-polling listener in the backend (started with the server or via a
   `dev-bot.ps1` runner); `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` in .env;
   messages from any other chat id are refused (the auth slot's first real
@@ -274,16 +274,24 @@ later when the app deploys (Sprint 7).*
   (description, assumptions, kcal/P/C/F, confidence; label scans include
   the basis).
   **Demo:** send the bot a meal photo from your phone, get the estimate back.
-  *BLOCKED on PO (2 minutes, free): create the bot in Telegram — message
-  @BotFather → /newbot → copy the token into backend/.env. First message to
-  the bot will reveal your chat id; task includes surfacing it for .env.*
+  *Done: `app/telegram_bot.py` (separate process via `dev-bot.ps1`, reuses
+  `estimate_nutrition` — one estimation codepath) + owner auth that
+  auto-learns the chat id on first contact and locks via TELEGRAM_CHAT_ID.
+  LIVE-VERIFIED: bot @Mike_AI_Calorie_bot learned chat 128273024, ran a real
+  estimate round-trip (greeting → kind=unknown handled correctly). truststore
+  applied for its own HTTPS. 2 pure-render tests. Awaiting PO food-photo pass.*
 
-- [ ] **T6.3 — Telegram bot: confirm to tracker** *(from E3; depends: T6.2)*
+- [x] **T6.3 — Telegram bot: confirm to tracker** *(from E3; depends: T6.2)* ✅ 2026-07-18
   Inline buttons on the estimate reply (✅ log / ❌ discard) — review-before-
   save preserved in chat form; ✅ saves through the same entries write path
   with the right source ('ai'/'label'); reply confirms with the day's new
   running total vs target.
   **Demo:** tap ✅ in Telegram, entry appears in the web app's Today list.
+  *Done: inline keyboard on every estimate; pending estimates parked in
+  memory keyed by callback_data; ✅ calls the SAME `create_entry` as web +
+  replies with today's running total vs the active goal; ❌ discards; buttons
+  removed after action so a decision can't be double-tapped. Code-complete;
+  awaiting PO tap-to-log pass (verify entry appears in web Today list).*
 
 - [x] **T6.4 — Food library: quick-pick previously scanned foods** *(from E6; PROMOTED 2026-07-15 per PO; no dependencies)* ✅ 2026-07-15
   *Done: GET `/entries/frequent` (groups history case-insensitively, newest

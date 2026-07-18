@@ -127,6 +127,18 @@ decision had a written home.
   total = sum of items — see Lessons #10), D5 DD-MMM-YYYY display dates,
   D6 History screen reordered calories-first. 53/53 tests green.
 
+- **Sprint 6 features (2026-07-15)** — Macro rings on Today (palette
+  validated for colour-blindness against the app's own light/dark surfaces;
+  over-target signalled by colour *and* text), History day drill-down (D7),
+  and a zero-AI food quick-pick derived from history (T6.4). PO acceptance
+  round 2 passed all of them; the only false alarm ("weight still first")
+  was a stale browser tab.
+- **Telegram bot (2026-07-18)** — Sprint 6 closed. Meal logging by chat
+  photo, long-polling so it needs no deploy (see Lessons #11). Reuses the
+  existing estimation service and the single write path, so a whole new
+  input channel was ~250 lines and zero changes to the core. Owner auth
+  auto-learns the chat id on first message and locks via `.env`.
+
 ---
 
 ## Lessons learnt
@@ -185,6 +197,17 @@ decision had a written home.
     user can point at the exact line that's inflated ("I don't drink all
     the broth") and edit it. → For AI outputs users must trust, showing the
     working beats adjusting the answer.
+11. **A new input channel is cheap when everything converges on one path.**
+    The Telegram bot added a whole new way to log meals (chat photo →
+    estimate → confirm → save) in ~250 lines, changing nothing in the core —
+    because it just calls the existing `estimate_nutrition()` and
+    `create_entry()`. The "one write path" and "one estimation codepath"
+    decisions from Sprints 1 and 3 paid out again. Two integration notes
+    worth keeping: long polling (bot calls Telegram, not the reverse) lets a
+    local machine act as a bot server with no public URL and no deploy; and
+    the machine-specific SSL-interception fix (`truststore`) has to be
+    applied in *every* process that makes HTTPS calls, not just the web
+    server — the bot needed its own `inject_into_ssl()`.
 
 ---
 

@@ -25,6 +25,7 @@ honestly marked *low*.
 - [Goals & TDEE](#2-goals--tdee-never-overwrite-history)
 - [The AI estimation pipeline](#3-the-ai-estimation-pipeline)
 - [Trends & the offline report](#4-trends--the-offline-report)
+- [Logging meals from Telegram](#5-logging-meals-from-telegram-no-deploy)
 - [Real examples (captured live)](#real-examples-captured-live)
 - [Results](#results)
 - [How it was built — and what it taught](#how-it-was-built--and-what-it-taught)
@@ -226,6 +227,41 @@ a dual-axis plot. The same drawing specs are mirrored in Python
 (`report_charts.py`) to render the downloadable report: one HTML file,
 inline CSS and SVG, and a test that fails if `<link>`, `<script>`, `src=`,
 `url(` or any `http://` ever appears in it.
+
+## 5. Logging meals from Telegram (no deploy)
+
+`backend/app/telegram_bot.py` · run with `dev-bot.ps1`
+
+Send a meal photo to your own Telegram bot and log it without opening the
+app. The trick that avoids a deploy: **long polling, not a webhook** — the
+bot *calls out* to Telegram asking "any new messages?" (outbound HTTPS only),
+so it runs on your PC behind your home router with no public URL. It's a
+separate process that reuses the backend's own code — the same
+`estimate_nutrition()` for the AI and the same `create_entry()` write path
+as the web app, so chat-logged meals inherit identical validation and appear
+in the web Today list.
+
+Plain-language breakdown (same standing rule as the AI integration):
+
+- **Single tuning point** — none of its own: estimation behavior still lives
+  in the one `SYSTEM_PROMPT`. The bot only formats that result for chat.
+- **Request trace** — Telegram `getUpdates` (30 s long poll) → download the
+  largest photo → `estimate_nutrition()` → reply with the estimate card +
+  ✅/❌ inline buttons → on ✅, `create_entry()` (source `ai`/`label`) → reply
+  with today's running total vs target.
+- **Secret handling** — `TELEGRAM_BOT_TOKEN` in `backend/.env` (gitignored),
+  never in code; the token appears only in outbound URLs to Telegram.
+- **Auth** — one owner. `TELEGRAM_CHAT_ID` locks the bot to your chat; unset,
+  the first chat to message it is learned as owner (and told the id to lock).
+  Every other chat is refused — the multi-user `auth.py` slot's first real
+  customer.
+- **Response guarantee** — review-before-save is preserved *in chat*: nothing
+  is written until you tap ✅. `unknown` results (not food) never save.
+- **Failure modes** — estimation errors reach you as the same human-readable
+  messages; one bad update or network blip is logged and the loop keeps
+  polling; a restart only forgets not-yet-confirmed estimates (just re-send).
+- **Known limit** — long polling needs your PC on; the Sprint 7 deploy swaps
+  it for a webhook, a change isolated to this one file.
 
 ---
 
