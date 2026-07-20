@@ -15,6 +15,7 @@ Run the server (from the `backend` folder, with the venv active):
 """
 
 import logging
+import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -30,6 +31,7 @@ truststore.inject_into_ssl()
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # Load backend/.env into the process environment BEFORE importing modules
 # that read from it (the estimation service reads ESTIMATE_MODEL at import
@@ -80,11 +82,17 @@ app = FastAPI(
 # port) and this API runs on http://localhost:8000 — different ports means
 # different origins, so without this middleware every fetch() from the React
 # app would fail with a CORS error in the browser console.
+# The allowed browser origins come from an env var (comma-separated) so each
+# environment configures its own without a code change; default is the Vite
+# dev server. IN THE CONTAINER this list barely matters: the backend serves
+# the built frontend itself (see the static mount below), so requests are
+# SAME-ORIGIN and never trigger CORS at all — the whole class of CORS bugs
+# disappears in production.
+_cors_env = os.environ.get("CORS_ORIGINS", "http://localhost:5173")
+CORS_ORIGINS = [o.strip() for o in _cors_env.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    # Only our dev frontend may call this API from a browser. When we deploy
-    # (task T0.4), the deployed frontend URL gets added here via config.
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],  # allow GET, POST, PUT, DELETE, ... (all verbs)
     allow_headers=["*"],  # allow any request headers (e.g. Content-Type)
@@ -129,3 +137,20 @@ def health_check() -> dict:
     and reachable. FastAPI converts the returned dict to JSON automatically.
     """
     return {"status": "ok", "service": "calorie-tracker-api"}
+
+
+# --- Serve the built frontend (production / container) -----------------------
+# In local dev the frontend runs on its own Vite server (:5173) and this block
+# does nothing. In the container we build the React app to static files and
+# copy them to FRONTEND_DIR; FastAPI then serves them, so ONE process answers
+# both the API and the app at one address (which is why prod needs no CORS).
+#
+# ORDER MATTERS: this mount is registered LAST, after every API router above.
+# Starlette matches routes in registration order, so real endpoints
+# (/entries, /goals, /docs, …) are found first and only leftover paths (/, the
+# JS/CSS assets) fall through to these static files. html=True makes "/" serve
+# index.html.
+_frontend_dir = os.environ.get("FRONTEND_DIR")
+if _frontend_dir and Path(_frontend_dir).is_dir():
+    app.mount("/", StaticFiles(directory=_frontend_dir, html=True), name="frontend")
+    logger.info("Serving built frontend from %s", _frontend_dir)

@@ -1,0 +1,38 @@
+# .dockerignore — keep these OUT of the image build context (task T7.1).
+#
+# This is a SECURITY and size control. Anything listed here is never copied
+# into the image, even though the Dockerfile says `COPY backend/ ./`. Two of
+# these lines matter enormously:
+#   - backend/.env holds the real API key + bot token — it must NEVER be baked
+#     into an image (images get pushed to registries). Secrets are injected at
+#     RUN time via env vars instead.
+#   - the local *.sqlite3 is your dev data — the container starts with its own
+#     empty database on the mounted volume.
+
+# Secrets — never in an image
+**/.env
+
+# Local dev database (the container uses a fresh volume-mounted DB)
+**/*.sqlite3
+**/*.sqlite3-journal
+
+# Python virtual environment and caches (rebuilt from requirements.txt)
+backend/.venv/
+**/__pycache__/
+**/*.pyc
+backend/.pytest_cache/
+backend/logs/
+
+# Node install + prior builds (rebuilt inside stage 1)
+frontend/node_modules/
+frontend/dist/
+
+# Git and tooling
+.git/
+.gitignore
+.claude/
+
+# Docs and scripts aren't needed at runtime
+*.md
+dev-*.ps1
+run-tests.ps1

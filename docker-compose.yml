@@ -1,0 +1,39 @@
+# docker-compose.yml — run the containerized app with one command (task T7.1).
+#
+# `docker compose up --build` builds the image (if needed) and starts it with
+# the volume and secrets already wired — so you don't have to remember the long
+# `docker run -e … -v …` line. This is also the shape a host like AWS Lightsail
+# or App Runner consumes in Sprint 7 (T7.2).
+#
+# Before first run: put your key in backend/.env (same file the dev server
+# uses). Compose reads it via env_file below and injects it at RUN time — the
+# key stays OUT of the image (see .dockerignore).
+
+services:
+  app:
+    build:
+      context: .                  # build using ./Dockerfile
+      args:
+        # Secure by default (normal TLS). Only a machine that INTERCEPTS HTTPS
+        # needs these overridden — set NPM_STRICT_SSL=false and PIP_TRUSTED_HOSTS
+        # in a repo-root .env (compose reads it) or the shell before `up`.
+        NPM_STRICT_SSL: ${NPM_STRICT_SSL:-true}
+        PIP_TRUSTED_HOSTS: ${PIP_TRUSTED_HOSTS:-}
+    ports:
+      - "8000:8000"               # host:container — open http://localhost:8000
+    env_file:
+      - backend/.env              # ANTHROPIC_API_KEY (and TELEGRAM_* if used)
+    environment:
+      # Same-origin in the container, so CORS is effectively unused; listed
+      # for clarity. DATABASE_PATH/FRONTEND_DIR already have image defaults.
+      CORS_ORIGINS: ""
+    volumes:
+      # THE PERSISTENCE: map a named volume to /data, where DATABASE_PATH
+      # points. The container can be destroyed and rebuilt and the database
+      # (this volume) remains — entries survive restarts and redeploys.
+      - tracker-data:/data
+
+# A named volume managed by Docker; its lifetime is independent of the
+# container. `docker compose down` keeps it; `down -v` would delete it.
+volumes:
+  tracker-data:

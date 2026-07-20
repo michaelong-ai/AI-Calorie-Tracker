@@ -241,6 +241,11 @@ separate process that reuses the backend's own code — the same
 as the web app, so chat-logged meals inherit identical validation and appear
 in the web Today list.
 
+It also answers **slash commands** — `/today` (calories and each macro vs
+that day's targets, plus the meals behind them), `/yesterday`, `/week`, and
+`/help`. These are questions about data you already have, so they return
+before any AI call: instant and free.
+
 Plain-language breakdown (same standing rule as the AI integration):
 
 - **Single tuning point** — none of its own: estimation behavior still lives

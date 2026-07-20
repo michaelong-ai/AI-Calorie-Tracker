@@ -17,6 +17,7 @@ We use Python's built-in `sqlite3` module directly (no ORM) so the SQL stays
 visible — a deliberate learning-project choice recorded in ARCHITECTURE.md.
 """
 
+import os
 import sqlite3
 from pathlib import Path
 
@@ -26,7 +27,13 @@ from pathlib import Path
 # working directory) means the app finds its files no matter where the
 # server was started from.
 BACKEND_DIR = Path(__file__).parent.parent
-DATABASE_PATH = BACKEND_DIR / "calorie_tracker.sqlite3"   # gitignored (*.sqlite3)
+
+# Where the database file lives. Overridable via the DATABASE_PATH env var so
+# a container can point it at a MOUNTED VOLUME (e.g. /data/…): the volume
+# outlives the container, so entries survive a restart/redeploy. Unset (local
+# dev) → the gitignored file beside the code, exactly as before.
+_env_db_path = os.environ.get("DATABASE_PATH")
+DATABASE_PATH = Path(_env_db_path) if _env_db_path else BACKEND_DIR / "calorie_tracker.sqlite3"
 MIGRATIONS_DIR = BACKEND_DIR / "migrations"
 
 
@@ -37,6 +44,12 @@ def get_connection() -> sqlite3.Connection:
     responsible for closing it (use `with closing(get_connection()) as ...`
     or a try/finally) so file handles don't leak.
     """
+    # Make sure the folder exists before opening — with a custom DATABASE_PATH
+    # like /data/app.sqlite3, the mount point may be an empty directory (or not
+    # yet created on a bare `docker run`). sqlite3 creates the FILE but not its
+    # parent FOLDER. exist_ok=True makes this a safe no-op when it's already there.
+    DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
     conn = sqlite3.connect(DATABASE_PATH)
 
     # By default sqlite3 returns rows as plain tuples: row[3] — fragile and

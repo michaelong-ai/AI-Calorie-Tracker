@@ -31,7 +31,7 @@ AUTH (the multi-user "empty slot", first real customer)
 
 import logging
 import os
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 # Trust the OS certificate store for HTTPS BEFORE any HTTPS call is made — the
@@ -49,6 +49,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from app.logging_config import setup_logging
+from app.routers.days import day_summaries
 from app.routers.entries import EntryInput, create_entry, list_entries
 from app.routers.goals import active_goal
 from app.services.estimation import EstimationError, estimate_nutrition
@@ -143,7 +144,7 @@ def _authorise(client: httpx.Client, chat_id) -> bool:
             "👋 You're now connected as this bot's owner.\n\n"
             f"To lock this permanently, add this line to backend/.env and "
             f"restart the bot:\nTELEGRAM_CHAT_ID={cid}\n\n"
-            "Send me a meal photo or a description to estimate it.",
+            "Send /help to see what I can do.",
         )
         return True
 
@@ -203,6 +204,134 @@ def _running_total_line() -> str:
     return f"Today: {consumed} / {target} kcal · {abs(remaining)} kcal OVER."
 
 
+# --- Slash commands: "what have I eaten today?" (D8) --------------------------
+
+HELP_TEXT = (
+    "🥗 Calorie Tracker bot\n\n"
+    "Log a meal:\n"
+    "• Send a photo of your food (or a nutrition label)\n"
+    "• Or just type what you ate, e.g. 'chicken rice with egg'\n"
+    "Then tap ✅ to log it.\n\n"
+    "Check your progress:\n"
+    "/today — calories + macros so far today\n"
+    "/yesterday — the same for yesterday\n"
+    "/week — the last 7 days at a glance\n"
+    "/help — this message"
+)
+
+
+def _display_date(iso: str) -> str:
+    """ISO "2026-07-19" -> "19-Jul-2026" — the app-wide display format (D5)."""
+    return date.fromisoformat(iso).strftime("%d-%b-%Y")
+
+
+def _macro_line(label: str, consumed: float, target: float | None, unit: str) -> str:
+    """One 'Protein: 88 / 144 g · 56 to go' row.
+
+    `target` is None on days with no goal, in which case only the consumed
+    amount is shown — the spec's "show, don't score" rule for ungoverned days.
+    """
+    if target is None:
+        return f"{label}: {round(consumed)}{unit}"
+    remaining = round(target) - round(consumed)
+    tail = f"{remaining}{unit} to go" if remaining >= 0 else f"{abs(remaining)}{unit} over"
+    return f"{label}: {round(consumed)} / {round(target)}{unit} · {tail}"
+
+
+def _format_day(iso_date: str, heading: str) -> str:
+    """The full day report: totals vs targets, then the meals logged.
+
+    Reuses the SAME data the web app shows — list_entries for the meals and
+    active_goal for the targets that applied ON that date (goal versioning).
+    """
+    entries = list_entries(iso_date)
+    goal = active_goal(iso_date)
+
+    # Totals summed from the entries themselves, so this can never disagree
+    # with the meal list printed underneath it.
+    kcal = sum(e.calories for e in entries)
+    protein = sum(e.protein_g for e in entries)
+    carbs = sum(e.carbs_g for e in entries)
+    fat = sum(e.fat_g for e in entries)
+
+    lines = [f"📊 {heading} ({_display_date(iso_date)})", ""]
+    lines.append(_macro_line("Calories", kcal, goal.calories_target if goal else None, " kcal"))
+    lines.append(_macro_line("Protein", protein, goal.protein_g_target if goal else None, "g"))
+    lines.append(_macro_line("Carbs", carbs, goal.carbs_g_target if goal else None, "g"))
+    lines.append(_macro_line("Fat", fat, goal.fat_g_target if goal else None, "g"))
+
+    if goal is None:
+        lines.append("\n(no goal set for this day — totals only)")
+
+    if entries:
+        lines.append("")
+        lines.append(f"{len(entries)} item{'s' if len(entries) != 1 else ''} logged:")
+        for e in entries:
+            # 📷 marks entries that came from a scan rather than manual typing.
+            mark = "📷 " if e.source != "manual" else ""
+            lines.append(f"• {mark}{e.description} — {round(e.calories)} kcal")
+    else:
+        lines.append("\nNothing logged yet — send me a meal photo!")
+
+    return "\n".join(lines)
+
+
+def _format_week() -> str:
+    """The last 7 days: one line per day, plus the average over logged days."""
+    today = date.today()
+    start = today - timedelta(days=6)
+    summaries = day_summaries(start=start.isoformat(), end=today.isoformat())
+
+    # day_summaries only returns days that HAVE entries, so index them by date
+    # and walk the full 7-day span ourselves — otherwise a skipped day would
+    # silently vanish from the list instead of showing as a gap.
+    by_date = {d.local_date: d for d in summaries}
+
+    lines = ["📅 Last 7 days", ""]
+    for offset in range(6, -1, -1):  # oldest first
+        iso = (today - timedelta(days=offset)).isoformat()
+        day = by_date.get(iso)
+        if day is None:
+            lines.append(f"{_display_date(iso)}: — nothing logged")
+            continue
+        target = f" / {round(day.target.calories_target)}" if day.target else ""
+        lines.append(f"{_display_date(iso)}: {round(day.calories)}{target} kcal")
+
+    # Only days with entries count toward the average — a week where you
+    # logged 3 days shouldn't look like a starvation week.
+    logged = [d for d in summaries if d.entry_count > 0]
+    if logged:
+        avg = round(sum(d.calories for d in logged) / len(logged))
+        lines.append("")
+        lines.append(f"Average over {len(logged)} logged day"
+                     f"{'s' if len(logged) != 1 else ''}: {avg} kcal")
+    return "\n".join(lines)
+
+
+def _handle_command(client: httpx.Client, chat_id, text: str) -> bool:
+    """Handle a /command. Returns True if the text WAS a command.
+
+    Telegram commands can arrive as "/today@MyBotName" in groups, so we strip
+    anything after "@" before matching.
+    """
+    command = text.strip().split()[0].lower().split("@")[0]
+
+    if command in ("/start", "/help"):
+        _send(client, chat_id, HELP_TEXT)
+    elif command == "/today":
+        _send(client, chat_id, _format_day(date.today().isoformat(), "Today"))
+    elif command == "/yesterday":
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        _send(client, chat_id, _format_day(yesterday, "Yesterday"))
+    elif command == "/week":
+        _send(client, chat_id, _format_week())
+    else:
+        _send(client, chat_id, f"Unknown command {command}.\n\n{HELP_TEXT}")
+
+    logger.info("Handled command %s", command)
+    return True
+
+
 # --- Handling the two kinds of update -----------------------------------------
 
 
@@ -215,6 +344,13 @@ def _handle_message(client: httpx.Client, message: dict) -> None:
 
     # A caption accompanies a photo; plain text messages use "text".
     text = message.get("caption") or message.get("text")
+
+    # Slash commands (/today, /help…) are handled here and RETURN EARLY —
+    # they're questions about existing data, so they never reach the AI and
+    # cost nothing (D8).
+    if not message.get("photo") and text and text.strip().startswith("/"):
+        _handle_command(client, chat_id, text)
+        return
 
     # Telegram sends several downsized copies of a photo; the LAST is the
     # largest, which the vision model reads best.
@@ -229,7 +365,7 @@ def _handle_message(client: httpx.Client, message: dict) -> None:
             return
 
     if image_bytes is None and not (text and text.strip()):
-        _send(client, chat_id, "Send a meal photo, or describe what you ate.")
+        _send(client, chat_id, "Send a meal photo, or describe what you ate.\n\n" + HELP_TEXT)
         return
 
     # Let the user know something is happening — the AI call takes a few seconds.

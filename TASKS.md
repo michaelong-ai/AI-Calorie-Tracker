@@ -409,6 +409,19 @@ closes with T5.3, the full-phone smoke test.*
   say so and it becomes its own task.
   **Demo:** tap a past day in History, see the meals logged that day.
 
+- [x] **D8 — Telegram bot: progress commands** *(Sprint 6; PO request 2026-07-20)* ✅ 2026-07-20
+  Slash commands so the bot answers "what have I eaten today?" without a
+  photo: `/today` (calories + each macro vs that day's targets, plus the
+  meals behind the totals), `/yesterday`, `/week` (7 days incl. gaps +
+  average over logged days), `/help` + `/start`.
+  **Demo:** send /today in Telegram, get the running totals back.
+  *Done in `app/telegram_bot.py`: commands return EARLY before any AI call
+  (they're questions about existing data — zero API cost). Reuses
+  `list_entries`/`active_goal`/`day_summaries`, so the numbers are the same
+  ones the web app shows, judged against the goal active on that date.
+  Dates in DD-MMM-YYYY (D5). 3 tests added (62 total). Live-verified against
+  the real database. Awaiting PO hands-on in Telegram.*
+
 ## Spike findings
 *(S1 results go here: model, prompt, response schema, cost per scan)*
 
