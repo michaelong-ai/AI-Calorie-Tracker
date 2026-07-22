@@ -422,6 +422,23 @@ closes with T5.3, the full-phone smoke test.*
   Dates in DD-MMM-YYYY (D5). 3 tests added (62 total). Live-verified against
   the real database. Awaiting PO hands-on in Telegram.*
 
+- [x] **D8 — Telegram bot: progress commands** *(Sprint 6; PO request 2026-07-19)* ✅ 2026-07-21
+  Slash commands so the bot answers "what have I eaten today?" without a
+  photo: `/today` (calories + each macro vs the targets active that day,
+  plus the meal list), `/yesterday`, `/week` (7 days incl. skipped days and
+  the average over logged days), `/help`. Commands are matched before any
+  AI call, so they cost nothing. Registered with Telegram via
+  `setMyCommands`, which gives the in-app Menu button + autocomplete.
+  3 new tests (62 total). Live-verified against the real DB.
+
+- [x] **D9 — Bugfix: stale button taps swallowed the confirmation** *(Sprint 6; found in live logs 2026-07-21)* ✅ 2026-07-21
+  A ✅ tap made while the bot was down saved the entry but produced no reply:
+  Telegram rejects `answerCallbackQuery` for callbacks older than ~1 minute
+  (400), and that exception aborted `_handle_callback` before the "Logged"
+  message. Fix: `_best_effort()` wrapper — cosmetic Telegram calls (answering
+  a tap, removing buttons) can now fail without touching the save/confirm
+  path. Evidence: entry id=14 saved with no user-visible confirmation.
+
 ## Spike findings
 *(S1 results go here: model, prompt, response schema, cost per scan)*
 

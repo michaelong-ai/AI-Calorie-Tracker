@@ -113,6 +113,22 @@ def _send(client: httpx.Client, chat_id, text: str, buttons: list | None = None)
     _call(client, "sendMessage", **params)
 
 
+def _best_effort(client: httpx.Client, method: str, **params) -> None:
+    """Make a COSMETIC Telegram call, ignoring any failure.
+
+    Used for the button polish (answering a tap, removing buttons). These can
+    legitimately fail — a tap made while the bot was down is older than
+    Telegram's ~1 minute callback window and comes back 400 — and such a
+    failure must NEVER abort the real work that follows (saving the entry and
+    confirming it). Learned the hard way: a stale tap once saved the meal but
+    swallowed the "✅ Logged" reply.
+    """
+    try:
+        _call(client, method, **params)
+    except Exception as e:  # noqa: BLE001 — cosmetic by definition
+        logger.info("Best-effort %s skipped: %s", method, e)
+
+
 def _download_photo(client: httpx.Client, file_id: str) -> bytes:
     """Fetch a photo's bytes given its Telegram file_id (two-step: getFile
     returns a path, then we download from the file endpoint)."""
@@ -218,6 +234,28 @@ HELP_TEXT = (
     "/week — the last 7 days at a glance\n"
     "/help — this message"
 )
+
+
+# What Telegram shows in the bot's "Menu" button and in the autocomplete list
+# when you type "/". Registered once at startup via setMyCommands (below) —
+# Telegram stores it against the bot, so it persists between restarts.
+COMMAND_MENU = [
+    {"command": "today", "description": "Calories + macros so far today"},
+    {"command": "yesterday", "description": "Yesterday's totals"},
+    {"command": "week", "description": "The last 7 days at a glance"},
+    {"command": "help", "description": "What this bot can do"},
+]
+
+
+def _register_commands(client: httpx.Client) -> None:
+    """Tell Telegram this bot's command list, so users get a menu.
+
+    Purely cosmetic — the bot answers these commands whether or not they're
+    registered — but it makes them DISCOVERABLE instead of something you have
+    to remember. Note the names carry no leading "/" here; Telegram adds it.
+    """
+    _call(client, "setMyCommands", commands=COMMAND_MENU)
+    logger.info("Registered %d commands with Telegram", len(COMMAND_MENU))
 
 
 def _display_date(iso: str) -> str:
@@ -409,9 +447,12 @@ def _handle_callback(client: httpx.Client, callback: dict) -> None:
     message_id = callback["message"]["message_id"]
     data = callback.get("data", "")
 
-    # Always answer the callback so Telegram stops the button's spinner.
+    # Answer the callback so Telegram stops the button's spinner. Best-effort:
+    # an expired tap (bot was restarted) can't be answered, and that must not
+    # stop us saving and confirming.
     def ack(text: str = "") -> None:
-        _call(client, "answerCallbackQuery", callback_query_id=callback["id"], text=text)
+        _best_effort(client, "answerCallbackQuery",
+                     callback_query_id=callback["id"], text=text)
 
     if not _authorise(client, chat_id):
         ack()
@@ -422,7 +463,7 @@ def _handle_callback(client: httpx.Client, callback: dict) -> None:
     if pending is None:
         # The estimate expired (bot restarted, or already actioned).
         ack("That estimate expired — send the meal again.")
-        _call(client, "editMessageReplyMarkup", chat_id=chat_id, message_id=message_id)
+        _best_effort(client, "editMessageReplyMarkup", chat_id=chat_id, message_id=message_id)
         return
 
     # Remove the buttons either way, so the decision can't be double-tapped.
@@ -474,6 +515,13 @@ def run() -> None:
     offset = None
     # Read timeout must outlast the server-side long poll, plus a margin.
     client = httpx.Client(timeout=POLL_TIMEOUT_S + 15)
+
+    # Publish the command menu so Telegram can offer autocomplete. Failure
+    # here is cosmetic only, so it must never stop the bot from starting.
+    try:
+        _register_commands(client)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Could not register the command menu: %s", e)
 
     while True:
         try:
